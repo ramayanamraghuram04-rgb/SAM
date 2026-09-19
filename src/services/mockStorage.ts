@@ -149,6 +149,20 @@ export const MockStore = {
     }
   },
 
+  deleteUser(uid: string): void {
+    const users = this.getUsers().filter((u) => u.uid !== uid);
+    saveList(STORAGE_KEYS.USERS, users);
+  },
+
+  updateUserData(uid: string, data: Partial<AppUser & { passwordHash?: string }>): void {
+    const users = this.getUsers();
+    const idx = users.findIndex((u) => u.uid === uid);
+    if (idx >= 0) {
+      users[idx] = { ...users[idx], ...data } as (AppUser & { passwordHash: string });
+      saveList(STORAGE_KEYS.USERS, users);
+    }
+  },
+
   // Subjects
   getSubjects(): Subject[] {
     return getList<Subject>(STORAGE_KEYS.SUBJECTS);

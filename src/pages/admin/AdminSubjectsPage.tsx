@@ -3,6 +3,7 @@ import {
   BookOpen, 
   Plus, 
   Trash2, 
+  Edit3,
   Layers, 
   GraduationCap, 
   Sparkles,
@@ -23,10 +24,19 @@ export const AdminSubjectsPage: React.FC = () => {
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [teachingAssignments, setTeachingAssignments] = useState<TeachingAssignment[]>([]);
 
-  // Modal State
+  // Add Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+
+  // Edit Modal State
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingSubject, setEditingSubject] = useState<Subject | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editCode, setEditCode] = useState('');
+  const [editSemester, setEditSemester] = useState<Semester>('3rd');
+  const [editSubmitting, setEditSubmitting] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
 
   // Form Fields
   const [name, setName] = useState('');
@@ -36,7 +46,11 @@ export const AdminSubjectsPage: React.FC = () => {
   const loadData = async () => {
     setLoading(true);
     try {
-      await academicService.seedDefaultSubjects();
+      try {
+        await academicService.seedDefaultSubjects();
+      } catch (seedErr) {
+        console.warn('Seed subjects note:', seedErr);
+      }
       const [allSubjs, allTa] = await Promise.all([
         academicService.getAllSubjects(),
         academicService.getAllTeachingAssignments(),
@@ -86,8 +100,49 @@ export const AdminSubjectsPage: React.FC = () => {
     }
   };
 
+  const openEditModal = (subj: Subject) => {
+    setEditingSubject(subj);
+    setEditName(subj.name);
+    setEditCode(subj.code || '');
+    setEditSemester(subj.semester);
+    setEditError(null);
+    setIsEditModalOpen(true);
+  };
+
+  const handleUpdateSubject = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingSubject) return;
+    setEditError(null);
+
+    if (!editName.trim()) {
+      setEditError('Subject name is required.');
+      return;
+    }
+
+    setEditSubmitting(true);
+    try {
+      const res = await academicService.updateSubject(editingSubject.id, {
+        name: editName.trim(),
+        semester: editSemester,
+        code: editCode.trim() || undefined,
+      });
+
+      if (res.error) {
+        setEditError(res.error);
+      } else {
+        setIsEditModalOpen(false);
+        setEditingSubject(null);
+        await loadData();
+      }
+    } catch (err: any) {
+      setEditError(err.message || 'Failed to update subject.');
+    } finally {
+      setEditSubmitting(false);
+    }
+  };
+
   const handleDeleteSubject = async (subj: Subject) => {
-    if (window.confirm(`Are you sure you want to delete "${subj.name}" (${subj.semester} Semester)?`)) {
+    if (window.confirm(`Are you sure you want to permanently DELETE "${subj.name}" (${subj.semester} Semester)?\n\nThis will also remove any faculty assignments for this subject.`)) {
       await academicService.deleteSubject(subj.id);
       await loadData();
     }
@@ -104,7 +159,7 @@ export const AdminSubjectsPage: React.FC = () => {
         <div>
           <h1 className="text-2xl font-black tracking-tight text-slate-900">Curricular Subjects</h1>
           <p className="text-xs text-slate-500">
-            Official subjects for {DEPARTMENT} across 1st, 3rd, 4th, and 5th semesters. Students automatically access all subjects in their semester.
+            Admin full control: Create, Change/Edit, and Delete official CSE subjects. Students automatically access all subjects in their semester.
           </p>
         </div>
 
@@ -178,14 +233,25 @@ export const AdminSubjectsPage: React.FC = () => {
                           </div>
                         </div>
 
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteSubject(subj)}
-                          className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
-                          title="Delete Subject"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => openEditModal(subj)}
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                            title="Edit Subject"
+                          >
+                            <Edit3 className="w-3.5 h-3.5" />
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteSubject(subj)}
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                            title="Delete Subject"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </div>
                     );
                   })}
@@ -196,38 +262,97 @@ export const AdminSubjectsPage: React.FC = () => {
         })}
       </div>
 
+      {/* Edit Subject Modal */}
+      {editingSubject && (
+        <Modal
+          isOpen={isEditModalOpen}
+          onClose={() => setIsEditModalOpen(false)}
+          title={`Edit Subject: ${editingSubject.name}`}
+        >
+          <form onSubmit={handleUpdateSubject} className="space-y-4">
+            <p className="text-xs text-slate-500">
+              Modify the subject title, course code, or semester.
+            </p>
+
+            {editError && (
+              <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700">
+                {editError}
+              </div>
+            )}
+
+            <Input
+              label="Subject Name"
+              value={editName}
+              onChange={(e) => setEditName(e.target.value)}
+              required
+              autoFocus
+            />
+
+            <Input
+              label="Subject Code (Optional)"
+              value={editCode}
+              onChange={(e) => setEditCode(e.target.value)}
+            />
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                Semester
+              </label>
+              <select
+                value={editSemester}
+                onChange={(e) => setEditSemester(e.target.value as Semester)}
+                className="w-full text-sm rounded-xl border border-slate-300 p-2.5 bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+              >
+                <option value="1st">1st Semester (1st Year)</option>
+                <option value="3rd">3rd Semester (2nd Year)</option>
+                <option value="4th">4th Semester (2nd Year)</option>
+                <option value="5th">5th Semester (3rd Year)</option>
+              </select>
+            </div>
+
+            <div className="pt-4 border-t border-slate-200 flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="md"
+                onClick={() => setIsEditModalOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                variant="primary"
+                size="md"
+                loading={editSubmitting}
+                className="bg-indigo-600 hover:bg-indigo-700"
+              >
+                Save Changes
+              </Button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
       {/* Add Subject Modal */}
       <Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        title="Add Curricular Subject"
+        title="Add New Academic Subject"
       >
         <form onSubmit={handleCreateSubject} className="space-y-4">
+          <p className="text-xs text-slate-500">
+            Create an official curriculum subject. It will automatically become accessible to all students enrolled in that semester.
+          </p>
+
           {formError && (
             <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700">
               {formError}
             </div>
           )}
 
-          <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1.5">
-              Semester
-            </label>
-            <select
-              value={semester}
-              onChange={(e) => setSemester(e.target.value as Semester)}
-              className="w-full text-sm rounded-xl border border-slate-300 p-2.5 bg-white font-medium text-slate-800"
-            >
-              <option value="1st">1st Semester</option>
-              <option value="3rd">3rd Semester</option>
-              <option value="4th">4th Semester</option>
-              <option value="5th">5th Semester</option>
-            </select>
-          </div>
-
           <Input
             label="Subject Name"
-            placeholder="e.g. C Programming, Web Technology"
+            placeholder="e.g. Computer Networks"
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
@@ -236,10 +361,26 @@ export const AdminSubjectsPage: React.FC = () => {
 
           <Input
             label="Subject Code (Optional)"
-            placeholder="e.g. CS-301, 17CS-302"
+            placeholder="e.g. CS-301"
             value={code}
             onChange={(e) => setCode(e.target.value)}
           />
+
+          <div>
+            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+              Semester
+            </label>
+            <select
+              value={semester}
+              onChange={(e) => setSemester(e.target.value as Semester)}
+              className="w-full text-sm rounded-xl border border-slate-300 p-2.5 bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+            >
+              <option value="1st">1st Semester (1st Year)</option>
+              <option value="3rd">3rd Semester (2nd Year)</option>
+              <option value="4th">4th Semester (2nd Year)</option>
+              <option value="5th">5th Semester (3rd Year)</option>
+            </select>
+          </div>
 
           <div className="pt-4 border-t border-slate-200 flex justify-end gap-2">
             <Button
@@ -257,7 +398,7 @@ export const AdminSubjectsPage: React.FC = () => {
               loading={submitting}
               className="bg-indigo-600 hover:bg-indigo-700"
             >
-              Save Subject
+              Add Subject
             </Button>
           </div>
         </form>

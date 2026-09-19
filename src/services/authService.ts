@@ -2,6 +2,7 @@ import {
   createUserWithEmailAndPassword, 
   signInWithEmailAndPassword, 
   signOut,
+  updatePassword,
   User as FirebaseUser,
   getAuth
 } from 'firebase/auth';
@@ -11,6 +12,7 @@ import {
   getDoc, 
   setDoc, 
   updateDoc,
+  deleteDoc,
   collection, 
   query, 
   where, 
@@ -594,6 +596,178 @@ export const authService = {
       MockStore.updateUserStatus(uid, newStatus);
       return { success: true, error: null };
     }
+  },
+
+  /**
+   * Admin Action: Delete Staff Account
+   */
+  async deleteStaffAccount(uid: string): Promise<{ success: boolean; error: string | null }> {
+    if (!uid) return { success: false, error: 'User ID is required.' };
+
+    MockStore.deleteUser(uid);
+    try {
+      const taList = await academicService.getAllTeachingAssignments();
+      for (const ta of taList.filter(t => t.staffId === uid)) {
+        await academicService.deleteTeachingAssignment(ta.id);
+      }
+    } catch {}
+
+    if (isLiveFirebaseConfigured) {
+      try {
+        await deleteDoc(doc(db, 'users', uid)).catch(() => {});
+        await deleteDoc(doc(db, 'staff', uid)).catch(() => {});
+        await deleteDoc(doc(db, 'teachers', uid)).catch(() => {});
+        return { success: true, error: null };
+      } catch (err: any) {
+        console.warn('Error deleting staff from cloud, removed locally:', err.message);
+        return { success: true, error: null };
+      }
+    }
+    return { success: true, error: null };
+  },
+
+  /**
+   * Admin Action: Update Staff Account (Name, Mobile, Password)
+   */
+  async updateStaffAccount(
+    uid: string, 
+    params: { name?: string; mobile?: string; password?: string }
+  ): Promise<{ success: boolean; error: string | null }> {
+    if (!uid) return { success: false, error: 'User ID is required.' };
+
+    const updatePayload: any = {};
+    if (params.name?.trim()) updatePayload.name = params.name.trim();
+    if (params.mobile?.trim()) {
+      const clean = cleanPhoneNumber(params.mobile);
+      if (isValidIndianMobile(clean)) {
+        updatePayload.mobile = clean;
+      }
+    }
+
+    MockStore.updateUserData(uid, {
+      ...updatePayload,
+      ...(params.password ? { passwordHash: params.password } : {})
+    });
+
+    if (isLiveFirebaseConfigured) {
+      try {
+        if (Object.keys(updatePayload).length > 0) {
+          await updateDoc(doc(db, 'users', uid), updatePayload).catch(() => {});
+          await updateDoc(doc(db, 'staff', uid), updatePayload).catch(() => {});
+          await updateDoc(doc(db, 'teachers', uid), updatePayload).catch(() => {});
+        }
+        return { success: true, error: null };
+      } catch (err: any) {
+        console.warn('Staff update cloud error, updated locally:', err.message);
+        return { success: true, error: null };
+      }
+    }
+    return { success: true, error: null };
+  },
+
+  /**
+   * Admin Action: Delete Student Account
+   */
+  async deleteStudentAccount(uid: string): Promise<{ success: boolean; error: string | null }> {
+    if (!uid) return { success: false, error: 'User ID is required.' };
+
+    MockStore.deleteUser(uid);
+
+    if (isLiveFirebaseConfigured) {
+      try {
+        await deleteDoc(doc(db, 'users', uid)).catch(() => {});
+        await deleteDoc(doc(db, 'students', uid)).catch(() => {});
+        return { success: true, error: null };
+      } catch (err: any) {
+        console.warn('Error deleting student from cloud, removed locally:', err.message);
+        return { success: true, error: null };
+      }
+    }
+    return { success: true, error: null };
+  },
+
+  /**
+   * Admin Action: Update Student Account (Name, PIN, Semester, Password)
+   */
+  async updateStudentAccount(
+    uid: string, 
+    params: { name?: string; pin?: string; semester?: Semester; password?: string }
+  ): Promise<{ success: boolean; error: string | null }> {
+    if (!uid) return { success: false, error: 'User ID is required.' };
+
+    const updatePayload: any = {};
+    if (params.name?.trim()) updatePayload.name = params.name.trim();
+    if (params.semester) updatePayload.semester = params.semester;
+    if (params.pin?.trim()) {
+      const norm = normalizePIN(params.pin);
+      if (isValidStudentPIN(norm)) {
+        updatePayload.pin = norm;
+      }
+    }
+
+    MockStore.updateUserData(uid, {
+      ...updatePayload,
+      ...(params.password ? { passwordHash: params.password } : {})
+    });
+
+    if (isLiveFirebaseConfigured) {
+      try {
+        if (Object.keys(updatePayload).length > 0) {
+          await updateDoc(doc(db, 'users', uid), updatePayload).catch(() => {});
+          await updateDoc(doc(db, 'students', uid), updatePayload).catch(() => {});
+        }
+        return { success: true, error: null };
+      } catch (err: any) {
+        console.warn('Student update cloud error, updated locally:', err.message);
+        return { success: true, error: null };
+      }
+    }
+    return { success: true, error: null };
+  },
+
+  /**
+   * Admin Action: Update Admin's Own Profile (Name, Mobile, Password)
+   */
+  async updateAdminProfile(
+    uid: string,
+    params: { name?: string; mobile?: string; newPassword?: string }
+  ): Promise<{ success: boolean; error: string | null }> {
+    if (!uid) return { success: false, error: 'Admin UID is required.' };
+
+    const updatePayload: any = {};
+    if (params.name?.trim()) updatePayload.name = params.name.trim();
+    if (params.mobile?.trim()) {
+      const clean = cleanPhoneNumber(params.mobile);
+      if (isValidIndianMobile(clean)) {
+        updatePayload.mobile = clean;
+      }
+    }
+
+    MockStore.updateUserData(uid, {
+      ...updatePayload,
+      ...(params.newPassword ? { passwordHash: params.newPassword } : {})
+    });
+
+    if (isLiveFirebaseConfigured) {
+      try {
+        if (params.newPassword && params.newPassword.length >= 6 && auth.currentUser) {
+          try {
+            await updatePassword(auth.currentUser, params.newPassword);
+          } catch (pwdErr: any) {
+            console.warn('Could not update Auth password directly (may require recent login):', pwdErr.message);
+          }
+        }
+
+        if (Object.keys(updatePayload).length > 0) {
+          await updateDoc(doc(db, 'users', uid), updatePayload);
+        }
+        return { success: true, error: null };
+      } catch (err: any) {
+        console.error('Error updating admin profile:', err);
+        return { success: false, error: err.message || 'Failed to update admin profile.' };
+      }
+    }
+    return { success: true, error: null };
   },
 
   /**
