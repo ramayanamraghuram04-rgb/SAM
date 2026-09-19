@@ -6,18 +6,19 @@ import { Card } from '../../components/common/Card';
 import { authService } from '../../services/authService';
 import { useAuth } from '../../context/AuthContext';
 import { DEPARTMENT } from '../../config/constants';
+import { normalizePIN, isValidStudentPIN } from '../../utils/pinValidator';
 
 interface StudentLoginPageProps {
   onSuccess: () => void;
-  onGoToRegister: () => void;
-  onSwitchToTeacher: () => void;
+  onSwitchToStaff: () => void;
+  onSwitchToAdmin?: () => void;
   onBackToHome: () => void;
 }
 
 export const StudentLoginPage: React.FC<StudentLoginPageProps> = ({
   onSuccess,
-  onGoToRegister,
-  onSwitchToTeacher,
+  onSwitchToStaff,
+  onSwitchToAdmin,
   onBackToHome,
 }) => {
   const { setUserManually } = useAuth();
@@ -30,8 +31,9 @@ export const StudentLoginPage: React.FC<StudentLoginPageProps> = ({
     e.preventDefault();
     setError('');
 
-    if (!pin.trim()) {
-      setError('Please enter your college student PIN.');
+    const normalized = normalizePIN(pin);
+    if (!normalized || !isValidStudentPIN(normalized)) {
+      setError('Please enter a valid student PIN (e.g. 24170-CM-001).');
       return;
     }
 
@@ -42,7 +44,7 @@ export const StudentLoginPage: React.FC<StudentLoginPageProps> = ({
 
     setIsLoading(true);
     try {
-      const res = await authService.loginStudent(pin.trim(), password);
+      const res = await authService.loginStudent(normalized, password);
       if (res.error || !res.user) {
         setError(res.error || 'Failed to sign in.');
       } else {
@@ -64,7 +66,7 @@ export const StudentLoginPage: React.FC<StudentLoginPageProps> = ({
           className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-900 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
-          <span>Back to Home</span>
+          <span>Back to SAM Home</span>
         </button>
 
         <Card className="p-6 sm:p-8 space-y-6">
@@ -76,7 +78,7 @@ export const StudentLoginPage: React.FC<StudentLoginPageProps> = ({
               Student Sign In
             </h2>
             <p className="text-xs text-slate-500">
-              Department of <span className="font-bold text-indigo-600">{DEPARTMENT}</span> • Login with your PIN
+              Department of <span className="font-bold text-indigo-600">{DEPARTMENT}</span> • Login with your College PIN
             </p>
           </div>
 
@@ -95,8 +97,9 @@ export const StudentLoginPage: React.FC<StudentLoginPageProps> = ({
                 placeholder="e.g. 24170-CM-001"
                 value={pin}
                 onChange={(e) => setPin(e.target.value.toUpperCase())}
-                leftIcon={<CreditCard className="w-4 h-4" />}
-                helperText="No email needed. Your PIN is your permanent college identity."
+                leftIcon={<CreditCard className="w-4 h-4 text-slate-400" />}
+                autoFocus
+                required
               />
             </div>
 
@@ -108,7 +111,9 @@ export const StudentLoginPage: React.FC<StudentLoginPageProps> = ({
                 placeholder="Enter your password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                leftIcon={<Lock className="w-4 h-4" />}
+                leftIcon={<Lock className="w-4 h-4 text-slate-400" />}
+                defaultVisible={true}
+                required
               />
             </div>
 
@@ -117,32 +122,35 @@ export const StudentLoginPage: React.FC<StudentLoginPageProps> = ({
               variant="primary"
               size="lg"
               fullWidth
-              isLoading={isLoading}
+              loading={isLoading}
               className="bg-indigo-600 hover:bg-indigo-700 shadow-indigo-500/20"
             >
               Sign In to Student Portal
             </Button>
           </form>
 
-          {/* Registration link */}
-          <div className="pt-4 border-t border-slate-100 text-center space-y-3">
-            <p className="text-xs text-slate-500">
-              New Student?{' '}
+          {/* Notice: No Public Registration */}
+          <div className="p-3 rounded-lg bg-indigo-50/70 border border-indigo-100 text-center text-[11px] text-indigo-700">
+            Student accounts are created by the College Administrator. No public registration is required.
+          </div>
+
+          {/* Switch links */}
+          <div className="pt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+            {onSwitchToAdmin && (
               <button
                 type="button"
-                onClick={onGoToRegister}
-                className="font-bold text-indigo-600 hover:text-indigo-700 hover:underline"
+                onClick={onSwitchToAdmin}
+                className="hover:text-slate-900 font-medium"
               >
-                Register Student Account
+                ← Admin Login
               </button>
-            </p>
-
+            )}
             <button
               type="button"
-              onClick={onSwitchToTeacher}
-              className="text-xs font-medium text-slate-400 hover:text-slate-600 block mx-auto"
+              onClick={onSwitchToStaff}
+              className="hover:text-blue-600 font-medium ml-auto"
             >
-              Are you a faculty member? Click here for Teacher Login
+              Staff Login →
             </button>
           </div>
         </Card>

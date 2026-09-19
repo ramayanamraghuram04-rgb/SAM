@@ -2,22 +2,26 @@ import {
   createUserWithEmailAndPassword, 
   signInWithEmailAndPassword, 
   signOut,
-  User as FirebaseUser
+  User as FirebaseUser,
+  getAuth
 } from 'firebase/auth';
+import { initializeApp, deleteApp } from 'firebase/app';
 import { 
   doc, 
   getDoc, 
   setDoc, 
+  updateDoc,
   collection, 
   query, 
   where, 
   getDocs 
 } from 'firebase/firestore';
-import { auth, db, isLiveFirebaseConfigured } from '../config/firebase';
-import { AppUser, TeacherUser, StudentUser, Department } from '../types';
+import { auth, db, firebaseConfig, isLiveFirebaseConfigured } from '../config/firebase';
+import { AppUser, AdminUser, StaffUser, StudentUser, Department, Semester, UserStatus } from '../types';
 import { isValidIndianMobile, cleanPhoneNumber, teacherPhoneToEmail } from '../utils/phoneValidator';
 import { isValidStudentPIN, normalizePIN, studentPinToEmail } from '../utils/pinValidator';
 import { MockStore } from './mockStorage';
+import { academicService } from './academicService';
 
 const DEPARTMENT: Department = 'CSE';
 
@@ -26,102 +30,52 @@ export interface AuthResult {
   error: string | null;
 }
 
+export function adminPhoneToEmail(mobile: string): string {
+  const clean = cleanPhoneNumber(mobile);
+  return `admin_${clean}@sam.internal`;
+}
+
+export function staffPhoneToEmail(mobile: string): string {
+  const clean = cleanPhoneNumber(mobile);
+  return `staff_${clean}@sam.internal`;
+}
+
 export const authService = {
   /**
-   * Register a new Teacher
+   * Compatibility alias for Teacher login
    */
-  async registerTeacher(params: {
-    name: string;
-    mobile: string;
-    password: string;
-    confirmPassword: string;
-  }): Promise<AuthResult> {
-    const { name, mobile, password, confirmPassword } = params;
-
-    const trimmedName = name.trim();
-    if (!trimmedName) {
-      return { user: null, error: 'Full name is required.' };
-    }
-
-    if (!isValidIndianMobile(mobile)) {
-      return { user: null, error: 'Please enter a valid 10-digit Indian mobile number.' };
-    }
-
-    if (!password || password.length < 6) {
-      return { user: null, error: 'Password must be at least 6 characters long.' };
-    }
-
-    if (password !== confirmPassword) {
-      return { user: null, error: 'Passwords do not match.' };
-    }
-
-    const cleanMobile = cleanPhoneNumber(mobile);
-    const syntheticEmail = teacherPhoneToEmail(cleanMobile);
-
-    if (isLiveFirebaseConfigured) {
-      try {
-        // Create Firebase Auth user directly (enforces mobile uniqueness via synthetic email)
-        const cred = await createUserWithEmailAndPassword(auth, syntheticEmail, password);
-        const uid = cred.user.uid;
-
-        const teacherData: TeacherUser = {
-          uid,
-          role: 'teacher',
-          name: trimmedName,
-          mobile: cleanMobile,
-          department: DEPARTMENT,
-          createdAt: new Date().toISOString(),
-        };
-
-        try {
-          // Store profile in users/{uid} and teachers/{uid}
-          await setDoc(doc(db, 'users', uid), teacherData);
-          await setDoc(doc(db, 'teachers', uid), teacherData);
-          return { user: teacherData, error: null };
-        } catch (dbErr: any) {
-          console.error('Firestore teacher profile error:', dbErr);
-          try { await cred.user.delete(); } catch (_) {}
-          return { user: null, error: 'Failed to save teacher profile: ' + (dbErr.message || 'Database error') };
-        }
-      } catch (err: any) {
-        console.error('Teacher registration error:', err);
-        if (err.code === 'auth/email-already-in-use') {
-          return { user: null, error: 'Mobile number is already registered. Please log in.' };
-        }
-        if (err.code === 'auth/weak-password') {
-          return { user: null, error: 'Password is too weak. Please use at least 6 characters.' };
-        }
-        return { user: null, error: err.message || 'Failed to create teacher account. Please try again.' };
-      }
-    } else {
-      // Mock / Offline mode fallback
-      const existing = MockStore.getUsers().find(
-        (u) => u.role === 'teacher' && (u as TeacherUser).mobile === cleanMobile
-      );
-      if (existing) {
-        return { user: null, error: 'Mobile number is already registered. Please log in.' };
-      }
-
-      const uid = `teacher_${cleanMobile}_${Date.now()}`;
-      const teacherData: TeacherUser = {
-        uid,
-        role: 'teacher',
-        name: trimmedName,
-        mobile: cleanMobile,
-        department: DEPARTMENT,
-        createdAt: new Date().toISOString(),
-      };
-
-      MockStore.saveUser(teacherData, password);
-      MockStore.setSession({ uid, role: 'teacher' });
-      return { user: teacherData, error: null };
-    }
+  async loginTeacher(mobile: string, password: string): Promise<AuthResult> {
+    return this.loginStaff(mobile, password);
   },
 
   /**
-   * Teacher Login
+   * Compatibility alias for Staff/Teacher registration
    */
-  async loginTeacher(mobile: string, password: string): Promise<AuthResult> {
+  async registerTeacher(params: { name: string; mobile: string; password: string; confirmPassword?: string }): Promise<AuthResult> {
+    const res = await this.createStaffAccount({
+      name: params.name,
+      mobile: params.mobile,
+      password: params.password,
+    });
+    return { user: res.user, error: res.error };
+  },
+
+  /**
+   * Compatibility alias for Student registration
+   */
+  async registerStudent(params: { name: string; pin: string; password: string; confirmPassword?: string; semester?: Semester }): Promise<AuthResult> {
+    const res = await this.createStudentAccount({
+      name: params.name,
+      pin: params.pin,
+      password: params.password,
+      semester: params.semester || '3rd',
+    });
+    return { user: res.user, error: res.error };
+  },
+  /**
+   * Admin Login
+   */
+  async loginAdmin(mobile: string, password: string): Promise<AuthResult> {
     if (!mobile || !isValidIndianMobile(mobile)) {
       return { user: null, error: 'Please enter a valid 10-digit mobile number.' };
     }
@@ -131,27 +85,58 @@ export const authService = {
     }
 
     const cleanMobile = cleanPhoneNumber(mobile);
-    const syntheticEmail = teacherPhoneToEmail(cleanMobile);
+    const syntheticEmail = adminPhoneToEmail(cleanMobile);
 
     if (isLiveFirebaseConfigured) {
       try {
-        const cred = await signInWithEmailAndPassword(auth, syntheticEmail, password);
+        let cred;
+        try {
+          cred = await signInWithEmailAndPassword(auth, syntheticEmail, password);
+        } catch (signInErr: any) {
+          // If admin doesn't exist yet and password meets minimum, allow first-time admin bootstrap for project setup
+          if (signInErr.code === 'auth/user-not-found' || signInErr.code === 'auth/invalid-credential') {
+            // Check if any admin exists in users collection
+            const adminQuery = query(collection(db, 'users'), where('role', '==', 'admin'));
+            const adminSnap = await getDocs(adminQuery);
+            if (adminSnap.empty && password.length >= 6) {
+              // Bootstrap first admin account
+              const newCred = await createUserWithEmailAndPassword(auth, syntheticEmail, password);
+              const adminData: AdminUser = {
+                uid: newCred.user.uid,
+                role: 'admin',
+                name: 'System Admin',
+                mobile: cleanMobile,
+                department: DEPARTMENT,
+                status: 'active',
+                createdAt: new Date().toISOString(),
+              };
+              await setDoc(doc(db, 'users', newCred.user.uid), adminData);
+              return { user: adminData, error: null };
+            }
+          }
+          throw signInErr;
+        }
+
         const userDoc = await getDoc(doc(db, 'users', cred.user.uid));
-        
         if (!userDoc.exists()) {
           await signOut(auth);
-          return { user: null, error: 'Teacher profile not found. Please register first.' };
+          return { user: null, error: 'Admin profile not found in system.' };
         }
 
         const userData = userDoc.data() as AppUser;
-        if (userData.role !== 'teacher') {
+        if (userData.role !== 'admin') {
           await signOut(auth);
-          return { user: null, error: 'Access denied. This account is registered as a student.' };
+          return { user: null, error: 'Access denied. Account is not registered as Admin.' };
+        }
+
+        if (userData.status === 'disabled') {
+          await signOut(auth);
+          return { user: null, error: 'This admin account has been disabled. Contact system supervisor.' };
         }
 
         return { user: userData, error: null };
       } catch (err: any) {
-        console.error('Teacher login error:', err);
+        console.error('Admin login error:', err);
         if (
           err.code === 'auth/wrong-password' || 
           err.code === 'auth/invalid-credential' || 
@@ -159,115 +144,130 @@ export const authService = {
         ) {
           return { user: null, error: 'Incorrect mobile number or password.' };
         }
-        return { user: null, error: 'Login failed. Please check your credentials and try again.' };
+        return { user: null, error: err.message || 'Login failed. Please verify credentials.' };
       }
     } else {
       // Mock / Offline mode fallback
-      const user = MockStore.getUsers().find(
-        (u) => u.role === 'teacher' && (u as TeacherUser).mobile === cleanMobile
+      let user = MockStore.getUsers().find(
+        (u) => u.role === 'admin' && (u as AdminUser).mobile === cleanMobile
       );
 
-      if (!user) {
-        return { user: null, error: 'Teacher account not found. Please register first.' };
+      // Auto-bootstrap default mock admin if not present
+      if (!user && password.length >= 6) {
+        const uid = `admin_${cleanMobile}_${Date.now()}`;
+        const adminData: AdminUser = {
+          uid,
+          role: 'admin',
+          name: 'System Admin',
+          mobile: cleanMobile,
+          department: DEPARTMENT,
+          status: 'active',
+          createdAt: new Date().toISOString(),
+        };
+        MockStore.saveUser(adminData, password);
+        user = { ...adminData, passwordHash: password } as any;
       }
 
-      if (user.passwordHash !== password) {
+      if (!user) {
+        return { user: null, error: 'Admin account not found.' };
+      }
+
+      if ((user as any).passwordHash !== password) {
         return { user: null, error: 'Incorrect mobile number or password.' };
       }
 
-      MockStore.setSession({ uid: user.uid, role: 'teacher' });
+      if (user.status === 'disabled') {
+        return { user: null, error: 'This admin account is disabled.' };
+      }
+
+      MockStore.setSession({ uid: user.uid, role: 'admin' });
       return { user, error: null };
     }
   },
 
   /**
-   * Register a new Student
+   * Staff / Teacher Login
    */
-  async registerStudent(params: {
-    name: string;
-    pin: string;
-    password: string;
-    confirmPassword: string;
-  }): Promise<AuthResult> {
-    const { name, pin, password, confirmPassword } = params;
-
-    const trimmedName = name.trim();
-    if (!trimmedName) {
-      return { user: null, error: 'Student full name is required.' };
+  async loginStaff(mobile: string, password: string): Promise<AuthResult> {
+    if (!mobile || !isValidIndianMobile(mobile)) {
+      return { user: null, error: 'Please enter a valid 10-digit mobile number.' };
     }
 
-    const normalizedPIN = normalizePIN(pin);
-    if (!isValidStudentPIN(normalizedPIN)) {
-      return { user: null, error: 'Invalid PIN. Please enter a valid college PIN (e.g. 24170-CM-001).' };
+    if (!password) {
+      return { user: null, error: 'Password is required.' };
     }
 
-    if (!password || password.length < 6) {
-      return { user: null, error: 'Password must be at least 6 characters long.' };
-    }
-
-    if (password !== confirmPassword) {
-      return { user: null, error: 'Passwords do not match.' };
-    }
-
-    const syntheticEmail = studentPinToEmail(normalizedPIN);
+    const cleanMobile = cleanPhoneNumber(mobile);
+    const staffEmail = staffPhoneToEmail(cleanMobile);
+    const legacyTeacherEmail = teacherPhoneToEmail(cleanMobile);
 
     if (isLiveFirebaseConfigured) {
       try {
-        // Create Firebase Auth user directly (enforces PIN uniqueness via synthetic email)
-        const cred = await createUserWithEmailAndPassword(auth, syntheticEmail, password);
-        const uid = cred.user.uid;
-
-        const studentData: StudentUser = {
-          uid,
-          role: 'student',
-          name: trimmedName,
-          pin: normalizedPIN,
-          department: DEPARTMENT,
-          createdAt: new Date().toISOString(),
-        };
-
+        let cred;
         try {
-          // Store profile in users/{uid} and students/{uid}
-          await setDoc(doc(db, 'users', uid), studentData);
-          await setDoc(doc(db, 'students', uid), studentData);
-          return { user: studentData, error: null };
-        } catch (dbErr: any) {
-          console.error('Firestore student profile error:', dbErr);
-          try { await cred.user.delete(); } catch (_) {}
-          return { user: null, error: 'Failed to save student profile: ' + (dbErr.message || 'Database error') };
+          cred = await signInWithEmailAndPassword(auth, staffEmail, password);
+        } catch (err: any) {
+          // Fallback to legacy teacher email if staff account was registered previously
+          if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
+            try {
+              cred = await signInWithEmailAndPassword(auth, legacyTeacherEmail, password);
+            } catch (legacyErr) {
+              throw err;
+            }
+          } else {
+            throw err;
+          }
         }
+
+        const userDoc = await getDoc(doc(db, 'users', cred.user.uid));
+        if (!userDoc.exists()) {
+          await signOut(auth);
+          return { user: null, error: 'Staff profile not found. Accounts are created by the Admin.' };
+        }
+
+        const userData = userDoc.data() as AppUser;
+        if (userData.role !== 'staff' && userData.role !== 'teacher') {
+          await signOut(auth);
+          return { user: null, error: 'Access denied. Account is not registered as Staff.' };
+        }
+
+        if (userData.status === 'disabled') {
+          await signOut(auth);
+          return { user: null, error: 'Your Staff account has been disabled by Admin.' };
+        }
+
+        return { user: userData, error: null };
       } catch (err: any) {
-        console.error('Student registration error:', err);
-        if (err.code === 'auth/email-already-in-use') {
-          return { user: null, error: 'This PIN is already registered. Please log in.' };
+        console.error('Staff login error:', err);
+        if (
+          err.code === 'auth/wrong-password' || 
+          err.code === 'auth/invalid-credential' || 
+          err.code === 'auth/user-not-found'
+        ) {
+          return { user: null, error: 'Incorrect mobile number or password.' };
         }
-        if (err.code === 'auth/weak-password') {
-          return { user: null, error: 'Password is too weak. Please use at least 6 characters.' };
-        }
-        return { user: null, error: err.message || 'Failed to create student account. Please try again.' };
+        return { user: null, error: 'Login failed. Please check your credentials or contact Admin.' };
       }
     } else {
-      // Mock / Offline fallback
-      const existing = MockStore.getUsers().find(
-        (u) => u.role === 'student' && (u as StudentUser).pin === normalizedPIN
+      // Mock fallback
+      const user = MockStore.getUsers().find(
+        (u) => (u.role === 'staff' || u.role === 'teacher') && (u as StaffUser).mobile === cleanMobile
       );
-      if (existing) {
-        return { user: null, error: 'This PIN is already registered. Please log in.' };
+
+      if (!user) {
+        return { user: null, error: 'Staff account not found. Please contact Admin.' };
       }
 
-      const uid = `student_${normalizedPIN.replace(/[^A-Z0-9]/g, '')}_${Date.now()}`;
-      const studentData: StudentUser = {
-        uid,
-        role: 'student',
-        name: trimmedName,
-        pin: normalizedPIN,
-        department: DEPARTMENT,
-        createdAt: new Date().toISOString(),
-      };
+      if ((user as any).passwordHash !== password) {
+        return { user: null, error: 'Incorrect mobile number or password.' };
+      }
 
-      MockStore.saveUser(studentData, password);
-      MockStore.setSession({ uid, role: 'student' });
-      return { user: studentData, error: null };
+      if (user.status === 'disabled') {
+        return { user: null, error: 'Your Staff account has been disabled by Admin.' };
+      }
+
+      MockStore.setSession({ uid: user.uid, role: 'staff' });
+      return { user, error: null };
     }
   },
 
@@ -293,13 +293,18 @@ export const authService = {
 
         if (!userDoc.exists()) {
           await signOut(auth);
-          return { user: null, error: 'Student profile not found. Please register first.' };
+          return { user: null, error: 'Student profile not found. Accounts are created by the Admin.' };
         }
 
         const userData = userDoc.data() as AppUser;
         if (userData.role !== 'student') {
           await signOut(auth);
-          return { user: null, error: 'Access denied. This account is registered as a teacher.' };
+          return { user: null, error: 'Access denied. Account is not registered as Student.' };
+        }
+
+        if (userData.status === 'disabled') {
+          await signOut(auth);
+          return { user: null, error: 'Your Student account has been disabled by Admin.' };
         }
 
         return { user: userData, error: null };
@@ -312,24 +317,313 @@ export const authService = {
         ) {
           return { user: null, error: 'Incorrect PIN or password.' };
         }
-        return { user: null, error: 'Login failed. Please check your PIN and password.' };
+        return { user: null, error: 'Login failed. Please check your PIN and password or contact Admin.' };
       }
     } else {
-      // Mock / Offline fallback
+      // Mock fallback
       const user = MockStore.getUsers().find(
         (u) => u.role === 'student' && (u as StudentUser).pin === normalizedPIN
       );
 
       if (!user) {
-        return { user: null, error: 'Student PIN not found. Please register first.' };
+        return { user: null, error: 'Student PIN not found. Please contact Admin.' };
       }
 
-      if (user.passwordHash !== password) {
+      if ((user as any).passwordHash !== password) {
         return { user: null, error: 'Incorrect PIN or password.' };
+      }
+
+      if (user.status === 'disabled') {
+        return { user: null, error: 'Your Student account has been disabled by Admin.' };
       }
 
       MockStore.setSession({ uid: user.uid, role: 'student' });
       return { user, error: null };
+    }
+  },
+
+  /**
+   * Admin Action: Create Staff Account
+   * Supports assigning multiple subjects across multiple semesters to a single Staff account!
+   */
+  async createStaffAccount(params: {
+    name: string;
+    mobile: string;
+    password: string;
+    teachingAssignments?: Array<{
+      semester: Semester;
+      subjectId: string;
+      subjectName: string;
+    }>;
+  }): Promise<{ user: StaffUser | null; error: string | null }> {
+    const { name, mobile, password, teachingAssignments = [] } = params;
+
+    const trimmedName = (name || '').trim();
+    if (!trimmedName) {
+      return { user: null, error: 'Staff name is required.' };
+    }
+
+    if (!isValidIndianMobile(mobile)) {
+      return { user: null, error: 'Valid 10-digit Indian mobile number is required.' };
+    }
+
+    if (!password || password.length < 6) {
+      return { user: null, error: 'Password must be at least 6 characters long.' };
+    }
+
+    const cleanMobile = cleanPhoneNumber(mobile);
+    const syntheticEmail = staffPhoneToEmail(cleanMobile);
+
+    if (isLiveFirebaseConfigured) {
+      // Use secondary Firebase app to create user without disrupting the current Admin session!
+      let secondaryApp;
+      try {
+        const tempAppName = `SAM_TempCreate_${Date.now()}_${Math.random()}`;
+        secondaryApp = initializeApp(firebaseConfig, tempAppName);
+        const secondaryAuth = getAuth(secondaryApp);
+
+        const cred = await createUserWithEmailAndPassword(secondaryAuth, syntheticEmail, password);
+        const uid = cred.user.uid;
+
+        const staffData: StaffUser = {
+          uid,
+          role: 'staff',
+          name: trimmedName,
+          mobile: cleanMobile,
+          department: DEPARTMENT,
+          status: 'active',
+          assignedSubjects: teachingAssignments.map((t) => t.subjectName),
+          assignedSemesters: Array.from(new Set(teachingAssignments.map((t) => t.semester))),
+          createdAt: new Date().toISOString(),
+        };
+
+        // Save in users/{uid}, staff/{uid} and legacy teachers/{uid}
+        await setDoc(doc(db, 'users', uid), staffData);
+        await setDoc(doc(db, 'staff', uid), staffData);
+        await setDoc(doc(db, 'teachers', uid), staffData);
+
+        // Assign teaching classes in Firestore
+        for (const ta of teachingAssignments) {
+          await academicService.assignStaffToSubject({
+            staffId: uid,
+            staffName: trimmedName,
+            staffMobile: cleanMobile,
+            semester: ta.semester,
+            subjectId: ta.subjectId,
+            subjectName: ta.subjectName,
+          });
+        }
+
+        return { user: staffData, error: null };
+      } catch (err: any) {
+        console.error('Error creating staff account in Firebase:', err);
+        if (err.code === 'auth/email-already-in-use') {
+          return { user: null, error: 'A staff member with this mobile number already exists.' };
+        }
+        return { user: null, error: err.message || 'Failed to create staff account.' };
+      } finally {
+        if (secondaryApp) {
+          try { await deleteApp(secondaryApp); } catch (_) {}
+        }
+      }
+    } else {
+      // Mock mode
+      const existing = MockStore.getUsers().find(
+        (u) => (u.role === 'staff' || u.role === 'teacher') && (u as StaffUser).mobile === cleanMobile
+      );
+      if (existing) {
+        return { user: null, error: 'A staff member with this mobile number already exists.' };
+      }
+
+      const uid = `staff_${cleanMobile}_${Date.now()}`;
+      const staffData: StaffUser = {
+        uid,
+        role: 'staff',
+        name: trimmedName,
+        mobile: cleanMobile,
+        department: DEPARTMENT,
+        status: 'active',
+        assignedSubjects: teachingAssignments.map((t) => t.subjectName),
+        assignedSemesters: Array.from(new Set(teachingAssignments.map((t) => t.semester))),
+        createdAt: new Date().toISOString(),
+      };
+
+      MockStore.saveUser(staffData, password);
+
+      for (const ta of teachingAssignments) {
+        await academicService.assignStaffToSubject({
+          staffId: uid,
+          staffName: trimmedName,
+          staffMobile: cleanMobile,
+          semester: ta.semester,
+          subjectId: ta.subjectId,
+          subjectName: ta.subjectName,
+        });
+      }
+
+      return { user: staffData, error: null };
+    }
+  },
+
+  /**
+   * Admin Action: Create Student Account
+   */
+  async createStudentAccount(params: {
+    name: string;
+    pin: string;
+    password: string;
+    semester: Semester;
+  }): Promise<{ user: StudentUser | null; error: string | null }> {
+    const { name, pin, password, semester } = params;
+
+    const trimmedName = (name || '').trim();
+    if (!trimmedName) {
+      return { user: null, error: 'Student full name is required.' };
+    }
+
+    const normalizedPIN = normalizePIN(pin);
+    if (!isValidStudentPIN(normalizedPIN)) {
+      return { user: null, error: 'Please enter a valid student PIN (e.g. 24170-CM-001).' };
+    }
+
+    if (!password || password.length < 6) {
+      return { user: null, error: 'Password must be at least 6 characters long.' };
+    }
+
+    if (!['1st', '3rd', '4th', '5th'].includes(semester)) {
+      return { user: null, error: 'Please select a valid semester (1st, 3rd, 4th, 5th).' };
+    }
+
+    const syntheticEmail = studentPinToEmail(normalizedPIN);
+
+    if (isLiveFirebaseConfigured) {
+      let secondaryApp;
+      try {
+        const tempAppName = `SAM_TempStudent_${Date.now()}_${Math.random()}`;
+        secondaryApp = initializeApp(firebaseConfig, tempAppName);
+        const secondaryAuth = getAuth(secondaryApp);
+
+        const cred = await createUserWithEmailAndPassword(secondaryAuth, syntheticEmail, password);
+        const uid = cred.user.uid;
+
+        const studentData: StudentUser = {
+          uid,
+          role: 'student',
+          name: trimmedName,
+          pin: normalizedPIN,
+          semester,
+          department: DEPARTMENT,
+          status: 'active',
+          createdAt: new Date().toISOString(),
+        };
+
+        await setDoc(doc(db, 'users', uid), studentData);
+        await setDoc(doc(db, 'students', uid), studentData);
+
+        return { user: studentData, error: null };
+      } catch (err: any) {
+        console.error('Error creating student in Firebase:', err);
+        if (err.code === 'auth/email-already-in-use') {
+          return { user: null, error: 'A student with this PIN already exists in the system.' };
+        }
+        return { user: null, error: err.message || 'Failed to create student account.' };
+      } finally {
+        if (secondaryApp) {
+          try { await deleteApp(secondaryApp); } catch (_) {}
+        }
+      }
+    } else {
+      // Mock mode
+      const existing = MockStore.getUsers().find(
+        (u) => u.role === 'student' && (u as StudentUser).pin === normalizedPIN
+      );
+      if (existing) {
+        return { user: null, error: 'A student with this PIN already exists in the system.' };
+      }
+
+      const uid = `student_${normalizedPIN.replace(/[^A-Z0-9]/g, '')}_${Date.now()}`;
+      const studentData: StudentUser = {
+        uid,
+        role: 'student',
+        name: trimmedName,
+        pin: normalizedPIN,
+        semester,
+        department: DEPARTMENT,
+        status: 'active',
+        createdAt: new Date().toISOString(),
+      };
+
+      MockStore.saveUser(studentData, password);
+      return { user: studentData, error: null };
+    }
+  },
+
+  /**
+   * Admin Action: Toggle account status (Enable / Disable)
+   */
+  async toggleUserStatus(uid: string, newStatus: UserStatus): Promise<{ success: boolean; error: string | null }> {
+    if (!uid) return { success: false, error: 'User ID is required.' };
+
+    if (isLiveFirebaseConfigured) {
+      try {
+        await updateDoc(doc(db, 'users', uid), { status: newStatus });
+        // Attempt mirror updates in staff/students
+        getDoc(doc(db, 'staff', uid)).then(snap => {
+          if (snap.exists()) updateDoc(doc(db, 'staff', uid), { status: newStatus }).catch(() => {});
+        }).catch(() => {});
+        getDoc(doc(db, 'students', uid)).then(snap => {
+          if (snap.exists()) updateDoc(doc(db, 'students', uid), { status: newStatus }).catch(() => {});
+        }).catch(() => {});
+        return { success: true, error: null };
+      } catch (err: any) {
+        console.error('Error updating user status:', err);
+        return { success: false, error: err.message || 'Failed to update status.' };
+      }
+    } else {
+      MockStore.updateUserStatus(uid, newStatus);
+      return { success: true, error: null };
+    }
+  },
+
+  /**
+   * Fetch all staff members (for Admin dashboard)
+   */
+  async getAllStaff(): Promise<StaffUser[]> {
+    if (isLiveFirebaseConfigured) {
+      try {
+        const q = query(collection(db, 'users'), where('role', 'in', ['staff', 'teacher']));
+        const snap = await getDocs(q);
+        const list: StaffUser[] = [];
+        snap.forEach((d) => list.push(d.data() as StaffUser));
+        return list.sort((a, b) => a.name.localeCompare(b.name));
+      } catch (err) {
+        console.error('Error fetching staff list:', err);
+        return [];
+      }
+    } else {
+      return MockStore.getUsers().filter(
+        (u) => u.role === 'staff' || u.role === 'teacher'
+      ) as StaffUser[];
+    }
+  },
+
+  /**
+   * Fetch all students (for Admin dashboard)
+   */
+  async getAllStudents(): Promise<StudentUser[]> {
+    if (isLiveFirebaseConfigured) {
+      try {
+        const q = query(collection(db, 'users'), where('role', '==', 'student'));
+        const snap = await getDocs(q);
+        const list: StudentUser[] = [];
+        snap.forEach((d) => list.push(d.data() as StudentUser));
+        return list.sort((a, b) => a.pin.localeCompare(b.pin));
+      } catch (err) {
+        console.error('Error fetching student list:', err);
+        return [];
+      }
+    } else {
+      return MockStore.getUsers().filter((u) => u.role === 'student') as StudentUser[];
     }
   },
 
@@ -353,7 +647,7 @@ export const authService = {
   },
 
   /**
-   * Logout user and purge all temporary session data
+   * Logout user and purge all temporary session data to eliminate same-device bleed
    */
   async logout(): Promise<void> {
     try {

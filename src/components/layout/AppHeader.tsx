@@ -1,5 +1,5 @@
 import React from 'react';
-import { Bell, LogOut, BookOpen, GraduationCap } from 'lucide-react';
+import { Bell, LogOut, BookOpen, GraduationCap, Shield } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useNotifications } from '../../context/NotificationContext';
 import { DEPARTMENT } from '../../config/constants';
@@ -13,8 +13,20 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   onNotificationClick,
   onProfileClick,
 }) => {
-  const { user, role, teacherUser, studentUser, logout } = useAuth();
+  const { user, role, adminUser, staffUser, studentUser, logout } = useAuth();
   const { unreadCount } = useNotifications();
+
+  const getPortalTitle = () => {
+    if (role === 'admin') return 'Admin Portal';
+    if (role === 'staff' || role === 'teacher') return 'Staff Portal';
+    return 'Student Portal';
+  };
+
+  const getSubIdentity = () => {
+    if (role === 'admin') return adminUser?.mobile || 'Administrator';
+    if (role === 'staff' || role === 'teacher') return staffUser?.mobile || 'Faculty';
+    return studentUser?.pin || 'Student';
+  };
 
   return (
     <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-slate-200/80 safe-top">
@@ -22,10 +34,12 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
         {/* Left: App Brand & Department */}
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-700 via-blue-600 to-indigo-500 flex items-center justify-center text-white shadow-md shadow-blue-500/25">
-            {role === 'teacher' ? (
-              <GraduationCap className="w-6 h-6" />
+            {role === 'admin' ? (
+              <Shield className="w-6 h-6 text-white" />
+            ) : role === 'staff' || role === 'teacher' ? (
+              <GraduationCap className="w-6 h-6 text-white" />
             ) : (
-              <BookOpen className="w-6 h-6" />
+              <BookOpen className="w-6 h-6 text-white" />
             )}
           </div>
           <div>
@@ -38,27 +52,29 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
               </span>
             </div>
             <p className="text-[11px] font-medium text-slate-500 line-clamp-1">
-              {role === 'teacher' ? 'Teacher Portal' : 'Student Portal'}
+              {getPortalTitle()}
             </p>
           </div>
         </div>
 
         {/* Right: Actions */}
         <div className="flex items-center gap-2 sm:gap-3">
-          {/* Notifications button */}
-          <button
-            onClick={onNotificationClick}
-            className="relative p-2 rounded-xl text-slate-600 hover:text-blue-600 hover:bg-blue-50 transition-colors"
-            title="Notifications"
-            aria-label="View notifications"
-          >
-            <Bell className="w-5 h-5" />
-            {unreadCount > 0 && (
-              <span className="absolute top-1 right-1 flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-bold text-white bg-rose-500 rounded-full ring-2 ring-white">
-                {unreadCount > 9 ? '9+' : unreadCount}
-              </span>
-            )}
-          </button>
+          {/* Notifications button (for Staff & Students) */}
+          {role !== 'admin' && (
+            <button
+              onClick={onNotificationClick}
+              className="relative p-2 rounded-xl text-slate-600 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+              title="Notifications"
+              aria-label="View notifications"
+            >
+              <Bell className="w-5 h-5" />
+              {unreadCount > 0 && (
+                <span className="absolute top-1 right-1 flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-bold text-white bg-rose-500 rounded-full ring-2 ring-white">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
+            </button>
+          )}
 
           {/* User badge / Profile quick view */}
           <button
@@ -71,7 +87,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
             <div className="hidden sm:block">
               <div className="text-xs font-bold text-slate-800 line-clamp-1">{user?.name}</div>
               <div className="text-[10px] font-medium text-slate-500">
-                {role === 'teacher' ? teacherUser?.mobile : studentUser?.pin}
+                {getSubIdentity()}
               </div>
             </div>
           </button>

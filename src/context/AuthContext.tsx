@@ -1,14 +1,16 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { auth, isLiveFirebaseConfigured } from '../config/firebase';
-import { AppUser, TeacherUser, StudentUser, UserRole } from '../types';
+import { AppUser, AdminUser, StaffUser, TeacherUser, StudentUser, UserRole } from '../types';
 import { authService } from '../services/authService';
 import { MockStore } from '../services/mockStorage';
 
 interface AuthContextType {
   user: AppUser | null;
   role: UserRole | null;
-  teacherUser: TeacherUser | null;
+  adminUser: AdminUser | null;
+  staffUser: StaffUser | null;
+  teacherUser: TeacherUser | null; // backward compatibility alias
   studentUser: StudentUser | null;
   loading: boolean;
   logout: () => Promise<void>;
@@ -42,9 +44,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [user?.uid, loadProfile]);
 
   const logout = useCallback(async () => {
-    // 1. Immediately clear memory state
+    // 1. Immediately wipe in-memory state
     setUser(null);
-    // 2. Perform service logout
+    // 2. Perform service logout and session purge
     await authService.logout();
     setLoading(false);
   }, []);
@@ -82,7 +84,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [loadProfile]);
 
   const role = user?.role || null;
-  const teacherUser = user?.role === 'teacher' ? (user as TeacherUser) : null;
+  const adminUser = user?.role === 'admin' ? (user as AdminUser) : null;
+  const staffUser = (user?.role === 'staff' || user?.role === 'teacher') ? (user as StaffUser) : null;
+  const teacherUser = staffUser;
   const studentUser = user?.role === 'student' ? (user as StudentUser) : null;
 
   return (
@@ -90,6 +94,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       value={{
         user,
         role,
+        adminUser,
+        staffUser,
         teacherUser,
         studentUser,
         loading,

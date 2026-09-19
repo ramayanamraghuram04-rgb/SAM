@@ -8,7 +8,7 @@ import {
   setDoc 
 } from 'firebase/firestore';
 import { db, isLiveFirebaseConfigured } from '../config/firebase';
-import { Assignment, ClassItem, ClassMember } from '../types';
+import { Assignment, ClassItem, ClassMember, StudentUser, Semester } from '../types';
 import { MockStore } from './mockStorage';
 import { notificationService } from './notificationService';
 import { classService } from './classService';
@@ -16,7 +16,7 @@ import { formatDate } from '../utils/dateUtils';
 
 export const assignmentService = {
   /**
-   * Teacher creates a new assignment for a class
+   * Staff/Teacher creates a new assignment for a class/subject
    */
   async createAssignment(params: {
     classItem: ClassItem;
@@ -68,7 +68,7 @@ export const assignmentService = {
       try {
         await setDoc(doc(db, 'assignments', assignmentId), newAssignment);
 
-        // Notify all enrolled students in this class
+        // Notify all enrolled students in this semester
         const students = await classService.getClassStudents(classItem.id);
         for (const student of students) {
           await notificationService.createNotification({
@@ -109,7 +109,7 @@ export const assignmentService = {
   },
 
   /**
-   * Fetch all assignments created by a teacher
+   * Fetch all assignments created by a teacher/staff
    */
   async getTeacherAssignments(teacherId: string): Promise<Assignment[]> {
     if (!teacherId) return [];
@@ -163,40 +163,67 @@ export const assignmentService = {
   },
 
   /**
-   * Fetch assignments for classes that a student is actively enrolled in
+   * Fetch assignments for a student based on their semester
+   * Automatic resolution: all assignments posted for the student's semester are retrieved!
    */
   async getStudentAssignments(studentId: string): Promise<Assignment[]> {
     if (!studentId) return [];
 
-    const enrolledMembers = await classService.getStudentClasses(studentId);
-    if (enrolledMembers.length === 0) return [];
+    let targetSemester: Semester | null = null;
+    if (isLiveFirebaseConfigured) {
+      try {
+        const userDoc = await getDoc(doc(db, 'users', studentId));
+        if (userDoc.exists()) {
+          targetSemester = (userDoc.data() as StudentUser).semester;
+        }
+      } catch (err) {
+        console.error('Error resolving student semester for assignments:', err);
+      }
+    } else {
+      const u = MockStore.getUserByUid(studentId) as StudentUser;
+      targetSemester = u?.semester || null;
+    }
 
-    const classIds = enrolledMembers.map((m) => m.classId);
+    if (!targetSemester) {
+      targetSemester = '3rd';
+    }
 
     if (isLiveFirebaseConfigured) {
       try {
-        // In Firestore, 'in' queries allow up to 30 elements
-        const chunks: string[][] = [];
-        for (let i = 0; i < classIds.length; i += 10) {
-          chunks.push(classIds.slice(i, i + 10));
-        }
-
+        const q = query(collection(db, 'assignments'), where('semester', '==', targetSemester));
+        const snap = await getDocs(q);
         const assignments: Assignment[] = [];
-        for (const chunk of chunks) {
-          const q = query(collection(db, 'assignments'), where('classId', 'in', chunk));
-          const snap = await getDocs(q);
-          snap.forEach((d) => assignments.push(d.data() as Assignment));
-        }
-
+        snap.forEach((d) => assignments.push(d.data() as Assignment));
         return assignments.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       } catch (err) {
-        console.error('Error fetching student assignments:', err);
+        console.error('Error fetching student assignments by semester:', err);
         return [];
       }
     } else {
       return MockStore.getAssignments()
-        .filter((a) => classIds.includes(a.classId))
+        .filter((a) => a.semester === targetSemester)
         .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    }
+  },
+
+  /**
+   * Fetch all assignments across all semesters (for Admin overview)
+   */
+  async getAllAssignments(): Promise<Assignment[]> {
+    if (isLiveFirebaseConfigured) {
+      try {
+        const snap = await getDocs(collection(db, 'assignments'));
+        const list: Assignment[] = [];
+        snap.forEach((d) => list.push(d.data() as Assignment));
+        return list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      } catch (err) {
+        console.error('Error getting all assignments:', err);
+        return [];
+      }
+    } else {
+      return MockStore.getAssignments().sort(
+        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
     }
   },
 

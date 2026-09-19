@@ -8,14 +8,14 @@ import {
   setDoc 
 } from 'firebase/firestore';
 import { db, isLiveFirebaseConfigured } from '../config/firebase';
-import { ClassItem, ClassMember, Semester, Department } from '../types';
+import { ClassItem, ClassMember, Semester, Department, StudentUser } from '../types';
 import { MockStore } from './mockStorage';
-
-const DEPARTMENT: Department = 'CSE';
+import { academicService } from './academicService';
+import { DEPARTMENT } from '../config/constants';
 
 export const classService = {
   /**
-   * Teacher creates a new class/subject
+   * Create a new class/subject
    */
   async createClass(params: {
     teacherId: string;
@@ -63,54 +63,59 @@ export const classService = {
   },
 
   /**
-   * Fetch all classes owned by a specific teacher
+   * Fetch all classes assigned to a specific staff/teacher
+   * Dynamically resolves from both teaching assignments and classes
    */
   async getTeacherClasses(teacherId: string): Promise<ClassItem[]> {
     if (!teacherId) return [];
 
-    if (isLiveFirebaseConfigured) {
-      try {
-        const q = query(
-          collection(db, 'classes'),
-          where('teacherId', '==', teacherId),
-          where('status', '==', 'active')
-        );
-        const snap = await getDocs(q);
-        const classes: ClassItem[] = [];
-        snap.forEach((d) => classes.push(d.data() as ClassItem));
+    try {
+      // 1. Get staff classes via academicService (auto-synced with teachingAssignments)
+      const staffClasses = await academicService.getStaffClasses(teacherId);
 
-        // Augment with counts
-        for (const cls of classes) {
-          const memberQ = query(
-            collection(db, 'classMembers'), 
-            where('teacherId', '==', teacherId),
-            where('classId', '==', cls.id)
-          );
-          const memberSnap = await getDocs(memberQ);
-          cls.studentCount = memberSnap.size;
-
-          const assignQ = query(collection(db, 'assignments'), where('classId', '==', cls.id));
-          const assignSnap = await getDocs(assignQ);
-          cls.assignmentCount = assignSnap.size;
+      // 2. Augment each class with studentCount (all students enrolled in that semester) and assignmentCount
+      let allStudents: StudentUser[] = [];
+      if (isLiveFirebaseConfigured) {
+        try {
+          const q = query(collection(db, 'users'), where('role', '==', 'student'));
+          const snap = await getDocs(q);
+          snap.forEach((d) => allStudents.push(d.data() as StudentUser));
+        } catch (e) {
+          console.error('Error fetching students for count:', e);
         }
-
-        return classes;
-      } catch (err) {
-        console.error('Error fetching teacher classes:', err);
-        return [];
+      } else {
+        allStudents = MockStore.getUsers().filter((u) => u.role === 'student') as StudentUser[];
       }
-    } else {
-      const classes = MockStore.getClasses().filter(
-        (c) => c.teacherId === teacherId && c.status === 'active'
-      );
-      const members = MockStore.getMembers();
-      const assignments = MockStore.getAssignments();
 
-      return classes.map((c) => ({
-        ...c,
-        studentCount: members.filter((m) => m.classId === c.id).length,
-        assignmentCount: assignments.filter((a) => a.classId === c.id).length,
-      }));
+      // Also get assignments for count
+      let allAssignments: any[] = [];
+      if (isLiveFirebaseConfigured) {
+        try {
+          const asgSnap = await getDocs(query(collection(db, 'assignments'), where('teacherId', '==', teacherId)));
+          asgSnap.forEach((d) => allAssignments.push(d.data()));
+        } catch (e) {
+          console.error('Error fetching assignments for count:', e);
+        }
+      } else {
+        allAssignments = MockStore.getAssignments().filter((a) => a.teacherId === teacherId);
+      }
+
+      return staffClasses.map((cls) => {
+        const semesterStudents = allStudents.filter(
+          (s) => (s.semester === cls.semester) && s.status !== 'disabled'
+        );
+        const classAssignments = allAssignments.filter(
+          (a) => a.classId === cls.id || (a.semester === cls.semester && a.subject === cls.subject)
+        );
+        return {
+          ...cls,
+          studentCount: semesterStudents.length,
+          assignmentCount: classAssignments.length,
+        };
+      });
+    } catch (err) {
+      console.error('Error in getTeacherClasses:', err);
+      return [];
     }
   },
 
@@ -134,61 +139,93 @@ export const classService = {
   },
 
   /**
-   * Fetch all active class memberships for a student
+   * Fetch all active class subjects available for a student based on their semester
+   * Automatic enrollment: A student belongs to a semester, so all subjects in that semester are automatically available!
    */
-  async getStudentClasses(studentId: string): Promise<ClassMember[]> {
+  async getStudentClasses(studentId: string, studentSemester?: Semester): Promise<ClassMember[]> {
     if (!studentId) return [];
 
-    if (isLiveFirebaseConfigured) {
-      try {
-        const q = query(
-          collection(db, 'classMembers'),
-          where('studentId', '==', studentId),
-          where('status', '==', 'active')
-        );
-        const snap = await getDocs(q);
-        const list: ClassMember[] = [];
-        snap.forEach((d) => list.push(d.data() as ClassMember));
-        return list;
-      } catch (err) {
-        console.error('Error fetching student classes:', err);
-        return [];
+    let targetSemester = studentSemester;
+
+    // If semester not provided, resolve student's profile
+    if (!targetSemester) {
+      if (isLiveFirebaseConfigured) {
+        try {
+          const userSnap = await getDoc(doc(db, 'users', studentId));
+          if (userSnap.exists()) {
+            targetSemester = (userSnap.data() as StudentUser).semester;
+          }
+        } catch (err) {
+          console.error('Error fetching student profile for classes:', err);
+        }
+      } else {
+        const found = MockStore.getUserByUid(studentId) as StudentUser;
+        targetSemester = found?.semester;
       }
-    } else {
-      return MockStore.getMembers().filter(
-        (m) => m.studentId === studentId && m.status === 'active'
-      );
     }
+
+    if (!targetSemester) {
+      targetSemester = '3rd'; // safe default
+    }
+
+    // Get all subjects/classes for that semester
+    const semesterClasses = await academicService.getStudentSemesterClasses(targetSemester);
+
+    // Map to ClassMember structure for compatibility with existing UI components
+    return semesterClasses.map((cls) => ({
+      id: `mem_${cls.id}_${studentId}`,
+      classId: cls.id,
+      studentId,
+      studentName: 'Student',
+      studentPIN: '',
+      teacherId: cls.teacherId,
+      subject: cls.subject,
+      semester: cls.semester,
+      status: 'active',
+      joinedAt: cls.createdAt || new Date().toISOString(),
+    }));
   },
 
   /**
-   * Fetch all enrolled students in a class
+   * Fetch all students enrolled in a class (all students in that semester)
    */
   async getClassStudents(classId: string, teacherId?: string): Promise<ClassMember[]> {
     if (!classId) return [];
 
+    // Find class to determine semester
+    const classItem = await this.getClassById(classId);
+    const semester = classItem?.semester || '3rd';
+
+    let students: StudentUser[] = [];
     if (isLiveFirebaseConfigured) {
       try {
-        const constraints: any[] = [
-          where('classId', '==', classId),
-          where('status', '==', 'active')
-        ];
-        if (teacherId) {
-          constraints.unshift(where('teacherId', '==', teacherId));
-        }
-        const q = query(collection(db, 'classMembers'), ...constraints);
+        const q = query(
+          collection(db, 'users'), 
+          where('role', '==', 'student'),
+          where('semester', '==', semester)
+        );
         const snap = await getDocs(q);
-        const list: ClassMember[] = [];
-        snap.forEach((d) => list.push(d.data() as ClassMember));
-        return list;
+        snap.forEach((d) => students.push(d.data() as StudentUser));
       } catch (err) {
         console.error('Error getting class students:', err);
-        return [];
       }
     } else {
-      return MockStore.getMembers().filter(
-        (m) => m.classId === classId && m.status === 'active'
-      );
+      students = MockStore.getUsers().filter(
+        (u) => u.role === 'student' && (u as StudentUser).semester === semester
+      ) as StudentUser[];
     }
+
+    return students.map((s) => ({
+      id: `mem_${classId}_${s.uid}`,
+      classId,
+      studentId: s.uid,
+      studentName: s.name,
+      studentPIN: s.pin,
+      teacherId: teacherId || classItem?.teacherId || '',
+      subject: classItem?.subject || '',
+      semester,
+      status: 'active',
+      joinedAt: s.createdAt,
+    }));
   },
 };

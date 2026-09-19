@@ -11,12 +11,20 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
-    function getUserRole() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
 
-    function isTeacher() {
-      return isAuthenticated() && getUserRole() == 'teacher';
+    function getUserRole() {
+      return getUserData().role;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && (getUserRole() == 'admin' || request.auth.token.admin == true);
+    }
+
+    function isStaff() {
+      return isAuthenticated() && (getUserRole() == 'staff' || getUserRole() == 'teacher');
     }
 
     function isStudent() {
@@ -26,73 +34,62 @@ service cloud.firestore {
     // 1. Users collection
     match /users/{userId} {
       allow read: if isAuthenticated();
-      allow create: if isAuthenticated() && request.auth.uid == userId;
-      allow update: if isOwner(userId) && 
-        request.resource.data.role == resource.data.role &&
-        request.resource.data.uid == userId;
-      allow delete: if false;
+      // Admin can create or update any user; owner can update profile if not changing role
+      allow create: if isAuthenticated() && (isAdmin() || request.auth.uid == userId);
+      allow update: if isAuthenticated() && (isAdmin() || (isOwner(userId) && request.resource.data.role == resource.data.role));
+      allow delete: if isAdmin();
     }
 
-    // 2. Teachers collection
+    // 2. Staff / Teachers collection
+    match /staff/{staffId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if isAdmin();
+    }
+
     match /teachers/{teacherId} {
       allow read: if isAuthenticated();
-      allow create, update: if isOwner(teacherId);
-      allow delete: if false;
+      allow create, update, delete: if isAdmin() || isOwner(teacherId);
     }
 
     // 3. Students collection
     match /students/{studentId} {
       allow read: if isAuthenticated();
-      allow create, update: if isOwner(studentId);
-      allow delete: if false;
+      allow create, update, delete: if isAdmin();
     }
 
-    // 4. Classes collection
+    // 4. Subjects collection
+    match /subjects/{subjectId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if isAdmin();
+    }
+
+    // 5. Teaching Assignments collection (Admin maps Staff -> Semester + Subject)
+    match /teachingAssignments/{assignmentId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if isAdmin();
+    }
+
+    // 6. Classes collection
     match /classes/{classId} {
-      // Any authenticated user can read classes (or students enrolled in them)
       allow read: if isAuthenticated();
-      // Only the teacher who owns the class can create or modify it
-      allow create: if isTeacher() && request.resource.data.teacherId == request.auth.uid;
-      allow update: if isTeacher() && resource.data.teacherId == request.auth.uid;
-      allow delete: if isTeacher() && resource.data.teacherId == request.auth.uid;
-    }
-
-    // 5. Class memberships collection
-    match /classMembers/{membershipId} {
-      allow read: if isAuthenticated();
-      // Student creates membership upon accepting invitation
-      allow create: if isAuthenticated() && request.resource.data.studentId == request.auth.uid;
-      // Teacher or student can delete/leave membership
-      allow delete: if isAuthenticated() && (
-        resource.data.studentId == request.auth.uid || 
-        resource.data.teacherId == request.auth.uid
-      );
-    }
-
-    // 6. Invitations collection
-    match /invitations/{invitationId} {
-      allow read: if isAuthenticated();
-      // Teacher creates invitation
-      allow create: if isAuthenticated() && request.resource.data.teacherId == request.auth.uid;
-      // Student can update status (accept/decline)
-      allow update: if isAuthenticated() && resource.data.studentId == request.auth.uid;
-      allow delete: if isAuthenticated() && resource.data.teacherId == request.auth.uid;
+      allow create: if isAdmin() || (isStaff() && request.resource.data.teacherId == request.auth.uid);
+      allow update, delete: if isAdmin() || (isStaff() && resource.data.teacherId == request.auth.uid);
     }
 
     // 7. Assignments collection
     match /assignments/{assignmentId} {
-      // Authenticated users can read assignments
       allow read: if isAuthenticated();
-      // Only the teacher owning the class can create/update assignments
-      allow create: if isTeacher() && request.resource.data.teacherId == request.auth.uid;
-      allow update, delete: if isTeacher() && resource.data.teacherId == request.auth.uid;
+      allow create: if isStaff() && request.resource.data.teacherId == request.auth.uid;
+      allow update, delete: if isAdmin() || (isStaff() && resource.data.teacherId == request.auth.uid);
     }
 
     // 8. Submissions collection
     match /submissions/{submissionId} {
       // Students can read ONLY their own submissions
-      // Teachers can read submissions for classes they teach
+      // Teachers can read submissions for their assigned classes
+      // Admin can view all
       allow read: if isAuthenticated() && (
+        isAdmin() ||
         resource.data.studentId == request.auth.uid || 
         resource.data.teacherId == request.auth.uid
       );
@@ -102,23 +99,22 @@ service cloud.firestore {
         request.resource.data.studentId == request.auth.uid &&
         request.resource.data.marks == null;
 
-      // Student can update their submission driveLink / resubmit (cannot tamper with marks)
-      // Teacher can grade the submission (set marks and feedback)
+      // Student can update their submission driveLink (cannot modify marks)
+      // Teacher can grade (set marks and feedback)
+      // Admin can update if needed
       allow update: if isAuthenticated() && (
+        isAdmin() ||
         (isStudent() && resource.data.studentId == request.auth.uid && request.resource.data.marks == resource.data.marks) ||
-        (isTeacher() && resource.data.teacherId == request.auth.uid)
+        (isStaff() && resource.data.teacherId == request.auth.uid)
       );
 
-      allow delete: if false;
+      allow delete: if isAdmin();
     }
 
     // 9. Notifications collection
     match /notifications/{notificationId} {
-      // Users can ONLY read notifications sent to them
       allow read: if isAuthenticated() && resource.data.recipientUid == request.auth.uid;
-      // Authenticated users can create notifications targeted to specific recipients
       allow create: if isAuthenticated();
-      // Recipient can mark notification as read
       allow update: if isAuthenticated() && resource.data.recipientUid == request.auth.uid;
       allow delete: if isAuthenticated() && resource.data.recipientUid == request.auth.uid;
     }

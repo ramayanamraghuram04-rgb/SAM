@@ -5,13 +5,13 @@ import {
   FileText, 
   Bell, 
   User, 
-  Award 
+  Award, 
+  Users, 
+  Bookmark, 
+  Shield 
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useNotifications } from '../../context/NotificationContext';
-
-export type TeacherTab = 'home' | 'classes' | 'assignments' | 'notifications' | 'profile';
-export type StudentTab = 'home' | 'classes' | 'assignments' | 'marks' | 'profile';
 
 interface BottomNavProps {
   currentTab: string;
@@ -22,7 +22,15 @@ export const BottomNav: React.FC<BottomNavProps> = ({ currentTab, onSelectTab })
   const { role } = useAuth();
   const { unreadCount } = useNotifications();
 
-  const teacherItems: { id: TeacherTab; label: string; icon: React.ReactNode; badge?: number }[] = [
+  const adminItems = [
+    { id: 'home', label: 'Home', icon: <Home className="w-5 h-5" /> },
+    { id: 'staff', label: 'Staff', icon: <User className="w-5 h-5" /> },
+    { id: 'students', label: 'Students', icon: <Users className="w-5 h-5" /> },
+    { id: 'teaching', label: 'Classes', icon: <Layers className="w-5 h-5" /> },
+    { id: 'profile', label: 'Admin', icon: <Shield className="w-5 h-5" /> },
+  ];
+
+  const teacherItems = [
     { id: 'home', label: 'Home', icon: <Home className="w-5 h-5" /> },
     { id: 'classes', label: 'Classes', icon: <Layers className="w-5 h-5" /> },
     { id: 'assignments', label: 'Assignments', icon: <FileText className="w-5 h-5" /> },
@@ -30,7 +38,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({ currentTab, onSelectTab })
     { id: 'profile', label: 'Profile', icon: <User className="w-5 h-5" /> },
   ];
 
-  const studentItems: { id: StudentTab; label: string; icon: React.ReactNode }[] = [
+  const studentItems = [
     { id: 'home', label: 'Home', icon: <Home className="w-5 h-5" /> },
     { id: 'classes', label: 'Classes', icon: <Layers className="w-5 h-5" /> },
     { id: 'assignments', label: 'Assignments', icon: <FileText className="w-5 h-5" /> },
@@ -38,7 +46,11 @@ export const BottomNav: React.FC<BottomNavProps> = ({ currentTab, onSelectTab })
     { id: 'profile', label: 'Profile', icon: <User className="w-5 h-5" /> },
   ];
 
-  const items = role === 'teacher' ? teacherItems : studentItems;
+  const items = role === 'admin' 
+    ? adminItems 
+    : (role === 'staff' || role === 'teacher') 
+      ? teacherItems 
+      : studentItems;
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200/80 safe-bottom sm:hidden">

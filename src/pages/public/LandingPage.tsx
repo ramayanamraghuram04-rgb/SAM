@@ -2,7 +2,7 @@ import React from 'react';
 import { 
   GraduationCap, 
   BookOpen, 
-  CheckCircle2, 
+  Shield, 
   ArrowRight, 
   ShieldCheck, 
   Smartphone, 
@@ -14,14 +14,11 @@ import { Card } from '../../components/common/Card';
 import { DEPARTMENT, DEPARTMENT_FULL } from '../../config/constants';
 
 interface LandingPageProps {
-  onSelectRole: (role: 'teacher' | 'student') => void;
-  onGoToLogin: (role: 'teacher' | 'student') => void;
-  onGoToRegister: (role: 'teacher' | 'student') => void;
+  onGoToLogin: (role: 'admin' | 'staff' | 'student') => void;
 }
 
 export const LandingPage: React.FC<LandingPageProps> = ({
   onGoToLogin,
-  onGoToRegister,
 }) => {
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50/60 via-white to-slate-50 flex flex-col justify-between">
@@ -47,79 +44,110 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             <Button
               variant="outline"
               size="sm"
-              onClick={() => onGoToLogin('student')}
+              onClick={() => onGoToLogin('admin')}
+              leftIcon={<Shield className="w-3.5 h-3.5" />}
             >
-              Student Login
+              Admin
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onGoToLogin('staff')}
+            >
+              Staff
             </Button>
             <Button
               variant="primary"
               size="sm"
-              onClick={() => onGoToLogin('teacher')}
+              onClick={() => onGoToLogin('student')}
             >
-              Teacher Login
+              Student
             </Button>
           </div>
         </div>
       </header>
 
       {/* Hero Section */}
-      <main className="max-w-5xl mx-auto px-4 sm:px-6 py-10 sm:py-16 text-center space-y-8">
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-10 sm:py-16 text-center space-y-8">
         <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-100/80 border border-blue-200 text-blue-800 text-xs font-bold tracking-wide">
           <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse" />
           <span>Exclusive for {DEPARTMENT_FULL} (1st, 3rd, 4th, 5th Sem)</span>
         </div>
 
         <h1 className="text-3xl sm:text-5xl font-black text-slate-900 tracking-tight max-w-3xl mx-auto leading-tight sm:leading-tight">
-          Effortless Assignment Management for <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">CSE Diploma</span>
+          Smart Assignment Management for <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">CSE Department</span>
         </h1>
 
         <p className="text-sm sm:text-lg text-slate-600 max-w-2xl mx-auto leading-relaxed">
-          Write assignments in physical notebooks, upload photos to Google Drive, and submit sharing links. Teachers grade and publish feedback in real-time.
+          Admin manages Staff, Students & Subjects. Staff sets assignments and grades. Students complete notebook assignments and submit Google Drive sharing links.
         </p>
 
-        {/* Portals Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 max-w-3xl mx-auto pt-4 text-left">
-          {/* Teacher Portal Box */}
-          <Card hoverable className="p-6 sm:p-7 border-blue-200 bg-white relative overflow-hidden group">
-            <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-700 flex items-center justify-center font-bold mb-4 group-hover:scale-105 transition-transform">
-              <GraduationCap className="w-6 h-6" />
+        {/* 3 Portal Cards: Admin, Staff, Student */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 max-w-5xl mx-auto pt-4 text-left">
+          {/* Admin Portal Box */}
+          <Card hoverable className="p-6 sm:p-7 border-slate-200 bg-white relative overflow-hidden group flex flex-col justify-between">
+            <div>
+              <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-800 flex items-center justify-center font-bold mb-4 group-hover:scale-105 transition-transform">
+                <Shield className="w-6 h-6 text-slate-800" />
+              </div>
+              <h2 className="text-lg font-bold text-slate-900 mb-1">Admin Portal</h2>
+              <p className="text-xs sm:text-sm text-slate-500 mb-5 leading-relaxed">
+                Add and manage Staff and Students. Configure Semesters, Subjects and Staff Teaching Assignments.
+              </p>
             </div>
-            <h2 className="text-lg font-bold text-slate-900 mb-1">Teacher Portal</h2>
-            <p className="text-xs sm:text-sm text-slate-500 mb-5 leading-relaxed">
-              Manage classes across 1st, 3rd, 4th, and 5th semesters. Invite students by college PIN, create notebook assignments, and grade submissions.
-            </p>
 
-            <div className="flex items-center gap-2 pt-2">
+            <div className="pt-2">
+              <Button
+                variant="outline"
+                size="md"
+                fullWidth
+                onClick={() => onGoToLogin('admin')}
+                rightIcon={<ArrowRight className="w-4 h-4" />}
+                className="hover:bg-slate-900 hover:text-white"
+              >
+                Admin Sign In
+              </Button>
+            </div>
+          </Card>
+
+          {/* Staff Portal Box */}
+          <Card hoverable className="p-6 sm:p-7 border-blue-200 bg-white relative overflow-hidden group flex flex-col justify-between">
+            <div>
+              <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-700 flex items-center justify-center font-bold mb-4 group-hover:scale-105 transition-transform">
+                <GraduationCap className="w-6 h-6" />
+              </div>
+              <h2 className="text-lg font-bold text-slate-900 mb-1">Staff / Teacher Portal</h2>
+              <p className="text-xs sm:text-sm text-slate-500 mb-5 leading-relaxed">
+                Login with Mobile Number. View assigned subjects, publish notebook assignments, review Google Drive submissions and award marks /10.
+              </p>
+            </div>
+
+            <div className="pt-2">
               <Button
                 variant="primary"
                 size="md"
                 fullWidth
-                onClick={() => onGoToLogin('teacher')}
+                onClick={() => onGoToLogin('staff')}
                 rightIcon={<ArrowRight className="w-4 h-4" />}
               >
-                Teacher Sign In
-              </Button>
-              <Button
-                variant="outline"
-                size="md"
-                onClick={() => onGoToRegister('teacher')}
-              >
-                Register
+                Staff Sign In
               </Button>
             </div>
           </Card>
 
           {/* Student Portal Box */}
-          <Card hoverable className="p-6 sm:p-7 border-indigo-200 bg-white relative overflow-hidden group">
-            <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-700 flex items-center justify-center font-bold mb-4 group-hover:scale-105 transition-transform">
-              <BookOpen className="w-6 h-6" />
+          <Card hoverable className="p-6 sm:p-7 border-indigo-200 bg-white relative overflow-hidden group flex flex-col justify-between">
+            <div>
+              <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-700 flex items-center justify-center font-bold mb-4 group-hover:scale-105 transition-transform">
+                <BookOpen className="w-6 h-6" />
+              </div>
+              <h2 className="text-lg font-bold text-slate-900 mb-1">Student Portal</h2>
+              <p className="text-xs sm:text-sm text-slate-500 mb-5 leading-relaxed">
+                Login with Diploma PIN. Access your semester subjects, submit notebook photos via Google Drive links, and view verified marks & feedback.
+              </p>
             </div>
-            <h2 className="text-lg font-bold text-slate-900 mb-1">Student Portal</h2>
-            <p className="text-xs sm:text-sm text-slate-500 mb-5 leading-relaxed">
-              Login with your college PIN. Accept teacher invitations, submit your Google Drive notebook links, and view your verified marks and feedback.
-            </p>
 
-            <div className="flex items-center gap-2 pt-2">
+            <div className="pt-2">
               <Button
                 variant="primary"
                 size="md"
@@ -130,15 +158,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               >
                 Student Sign In
               </Button>
-              <Button
-                variant="outline"
-                size="md"
-                onClick={() => onGoToRegister('student')}
-              >
-                Register
-              </Button>
             </div>
           </Card>
+        </div>
+
+        {/* Notice: No Public Registration */}
+        <div className="p-3 bg-slate-100/80 rounded-xl border border-slate-200 text-xs text-slate-600 max-w-xl mx-auto">
+          🔒 <strong>Official Portal Notice:</strong> Staff and Student accounts are issued exclusively by the College Admin. Public registration is not permitted.
         </div>
 
         {/* Feature badges */}
@@ -146,8 +172,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           <div className="flex items-start gap-2.5 p-3 rounded-xl bg-white/80 border border-slate-200/60">
             <ShieldCheck className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
             <div>
-              <h5 className="text-xs font-bold text-slate-800">No Email Needed</h5>
-              <p className="text-[10px] text-slate-500">Teacher Mobile & Student PIN</p>
+              <h5 className="text-xs font-bold text-slate-800">Direct Credentials</h5>
+              <p className="text-[10px] text-slate-500">Mobile Number & College PIN</p>
             </div>
           </div>
 
@@ -162,16 +188,16 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           <div className="flex items-start gap-2.5 p-3 rounded-xl bg-white/80 border border-slate-200/60">
             <Award className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
             <div>
-              <h5 className="text-xs font-bold text-slate-800">Instant Grading</h5>
-              <p className="text-[10px] text-slate-500">Marks out of 10 & Feedback</p>
+              <h5 className="text-xs font-bold text-slate-800">Evaluation / 10</h5>
+              <p className="text-[10px] text-slate-500">Fast marks & written feedback</p>
             </div>
           </div>
 
           <div className="flex items-start gap-2.5 p-3 rounded-xl bg-white/80 border border-slate-200/60">
             <Smartphone className="w-4 h-4 text-purple-600 shrink-0 mt-0.5" />
             <div>
-              <h5 className="text-xs font-bold text-slate-800">PWA Installable</h5>
-              <p className="text-[10px] text-slate-500">Android, desktop & tablet</p>
+              <h5 className="text-xs font-bold text-slate-800">PWA Mobile Ready</h5>
+              <p className="text-[10px] text-slate-500">Installable on all devices</p>
             </div>
           </div>
         </div>

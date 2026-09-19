@@ -8,11 +8,15 @@ import {
   Award, 
   LogOut, 
   GraduationCap, 
-  BookOpen 
+  BookOpen, 
+  Shield, 
+  Users, 
+  Bookmark, 
+  ClipboardList
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useNotifications } from '../../context/NotificationContext';
-import { DEPARTMENT, DEPARTMENT_FULL } from '../../config/constants';
+import { DEPARTMENT_FULL } from '../../config/constants';
 
 interface SidebarProps {
   currentTab: string;
@@ -20,10 +24,27 @@ interface SidebarProps {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ currentTab, onSelectTab }) => {
-  const { role, user, teacherUser, studentUser, logout } = useAuth();
+  const { role, user, adminUser, staffUser, studentUser, logout } = useAuth();
   const { unreadCount } = useNotifications();
 
-  const teacherItems = [
+  interface NavItem {
+    id: string;
+    label: string;
+    icon: React.ReactNode;
+    badge?: number;
+  }
+
+  const adminItems: NavItem[] = [
+    { id: 'home', label: 'Dashboard', icon: <Home className="w-5 h-5" /> },
+    { id: 'staff', label: 'Faculty / Staff', icon: <GraduationCap className="w-5 h-5" /> },
+    { id: 'students', label: 'Students', icon: <Users className="w-5 h-5" /> },
+    { id: 'subjects', label: 'Subjects', icon: <Bookmark className="w-5 h-5" /> },
+    { id: 'teaching', label: 'Teaching Classes', icon: <Layers className="w-5 h-5" /> },
+    { id: 'overview', label: 'Assignments & Subs', icon: <ClipboardList className="w-5 h-5" /> },
+    { id: 'profile', label: 'Admin Profile', icon: <Shield className="w-5 h-5" /> },
+  ];
+
+  const teacherItems: NavItem[] = [
     { id: 'home', label: 'Dashboard', icon: <Home className="w-5 h-5" /> },
     { id: 'classes', label: 'My Classes', icon: <Layers className="w-5 h-5" /> },
     { id: 'assignments', label: 'Assignments', icon: <FileText className="w-5 h-5" /> },
@@ -31,7 +52,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, onSelectTab }) => 
     { id: 'profile', label: 'Profile', icon: <User className="w-5 h-5" /> },
   ];
 
-  const studentItems = [
+  const studentItems: NavItem[] = [
     { id: 'home', label: 'Dashboard', icon: <Home className="w-5 h-5" /> },
     { id: 'classes', label: 'My Classes', icon: <Layers className="w-5 h-5" /> },
     { id: 'assignments', label: 'Assignments', icon: <FileText className="w-5 h-5" /> },
@@ -40,7 +61,23 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, onSelectTab }) => 
     { id: 'profile', label: 'Profile', icon: <User className="w-5 h-5" /> },
   ];
 
-  const navItems = role === 'teacher' ? teacherItems : studentItems;
+  const navItems = role === 'admin' 
+    ? adminItems 
+    : (role === 'staff' || role === 'teacher') 
+      ? teacherItems 
+      : studentItems;
+
+  const getRoleIcon = () => {
+    if (role === 'admin') return <Shield className="w-5 h-5 text-white" />;
+    if (role === 'staff' || role === 'teacher') return <GraduationCap className="w-5 h-5 text-white" />;
+    return <BookOpen className="w-5 h-5 text-white" />;
+  };
+
+  const getSubIdentity = () => {
+    if (role === 'admin') return 'Department Admin';
+    if (role === 'staff' || role === 'teacher') return 'CSE Faculty';
+    return `PIN: ${studentUser?.pin || ''}`;
+  };
 
   return (
     <aside className="hidden sm:flex flex-col w-64 shrink-0 bg-white border-r border-slate-200/80 min-h-[calc(100vh-4rem)] p-4">
@@ -48,12 +85,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, onSelectTab }) => 
       <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/60 mb-5">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold text-sm shadow-xs">
-            {role === 'teacher' ? <GraduationCap className="w-5 h-5" /> : <BookOpen className="w-5 h-5" />}
+            {getRoleIcon()}
           </div>
           <div className="overflow-hidden">
             <h4 className="text-xs font-bold text-slate-900 truncate">{user?.name}</h4>
             <p className="text-[11px] font-semibold text-blue-600 truncate">
-              {role === 'teacher' ? `CSE Faculty` : `PIN: ${studentUser?.pin}`}
+              {getSubIdentity()}
             </p>
           </div>
         </div>
@@ -98,10 +135,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, onSelectTab }) => 
         </div>
         <button
           onClick={logout}
-          className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+          className="w-full flex items-center gap-3 px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
         >
           <LogOut className="w-4 h-4" />
-          <span>Sign Out</span>
+          <span>Sign Out Safely</span>
         </button>
       </div>
     </aside>

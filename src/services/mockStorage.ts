@@ -2,13 +2,18 @@
 import { 
   AppUser, 
   TeacherUser, 
+  StaffUser,
   StudentUser, 
+  AdminUser,
   ClassItem, 
   ClassMember, 
   Invitation, 
   Assignment, 
   Submission, 
-  AppNotification 
+  AppNotification,
+  Subject,
+  TeachingAssignment,
+  UserRole
 } from '../types';
 
 const STORAGE_KEYS = {
@@ -19,6 +24,8 @@ const STORAGE_KEYS = {
   ASSIGNMENTS: 'sam_assignments',
   SUBMISSIONS: 'sam_submissions',
   NOTIFICATIONS: 'sam_notifications',
+  SUBJECTS: 'sam_subjects',
+  TEACHING_ASSIGNMENTS: 'sam_teaching_assignments',
   CURRENT_SESSION: 'sam_current_auth_session',
 };
 
@@ -90,7 +97,7 @@ function saveList<T>(key: string, data: T[]): void {
 
 export const MockStore = {
   // Current session management (mimicking Firebase Auth currentUser)
-  getSession(): { uid: string; role: 'teacher' | 'student' } | null {
+  getSession(): { uid: string; role: UserRole } | null {
     try {
       const raw = getSessionItem(STORAGE_KEYS.CURRENT_SESSION);
       return raw ? JSON.parse(raw) : null;
@@ -99,7 +106,7 @@ export const MockStore = {
     }
   },
 
-  setSession(session: { uid: string; role: 'teacher' | 'student' } | null): void {
+  setSession(session: { uid: string; role: UserRole } | null): void {
     if (!session) {
       removeSessionItem(STORAGE_KEYS.CURRENT_SESSION);
     } else {
@@ -133,6 +140,47 @@ export const MockStore = {
     saveList(STORAGE_KEYS.USERS, users);
   },
 
+  updateUserStatus(uid: string, status: 'active' | 'disabled'): void {
+    const users = this.getUsers();
+    const target = users.find((u) => u.uid === uid);
+    if (target) {
+      target.status = status;
+      saveList(STORAGE_KEYS.USERS, users);
+    }
+  },
+
+  // Subjects
+  getSubjects(): Subject[] {
+    return getList<Subject>(STORAGE_KEYS.SUBJECTS);
+  },
+
+  saveSubject(subj: Subject): void {
+    const list = this.getSubjects();
+    list.push(subj);
+    saveList(STORAGE_KEYS.SUBJECTS, list);
+  },
+
+  deleteSubject(id: string): void {
+    const list = this.getSubjects().filter((s) => s.id !== id);
+    saveList(STORAGE_KEYS.SUBJECTS, list);
+  },
+
+  // Teaching Assignments
+  getTeachingAssignments(): TeachingAssignment[] {
+    return getList<TeachingAssignment>(STORAGE_KEYS.TEACHING_ASSIGNMENTS);
+  },
+
+  saveTeachingAssignment(ta: TeachingAssignment): void {
+    const list = this.getTeachingAssignments();
+    list.push(ta);
+    saveList(STORAGE_KEYS.TEACHING_ASSIGNMENTS, list);
+  },
+
+  deleteTeachingAssignment(id: string): void {
+    const list = this.getTeachingAssignments().filter((t) => t.id !== id);
+    saveList(STORAGE_KEYS.TEACHING_ASSIGNMENTS, list);
+  },
+
   // Classes
   getClasses(): ClassItem[] {
     return getList<ClassItem>(STORAGE_KEYS.CLASSES);
@@ -140,7 +188,12 @@ export const MockStore = {
 
   saveClass(classItem: ClassItem): void {
     const classes = this.getClasses();
-    classes.unshift(classItem);
+    const idx = classes.findIndex((c) => c.id === classItem.id);
+    if (idx >= 0) {
+      classes[idx] = classItem;
+    } else {
+      classes.unshift(classItem);
+    }
     saveList(STORAGE_KEYS.CLASSES, classes);
   },
 

@@ -309,4 +309,26 @@ export const submissionService = {
       return { success: true, error: null };
     }
   },
+
+  /**
+   * Fetch all submissions across system (for Admin overview)
+   */
+  async getAllSubmissions(): Promise<Submission[]> {
+    if (isLiveFirebaseConfigured) {
+      try {
+        const snap = await getDocs(collection(db, 'submissions'));
+        const list: Submission[] = [];
+        snap.forEach((d) => list.push(d.data() as Submission));
+        return list.sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
+      } catch (err) {
+        console.error('Error getting all submissions:', err);
+        return [];
+      }
+    } else {
+      return MockStore.getSubmissions().sort(
+        (a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()
+      );
+    }
+  },
 };
+

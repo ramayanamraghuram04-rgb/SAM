@@ -8,6 +8,7 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;
   size?: ButtonSize;
   isLoading?: boolean;
+  loading?: boolean;
   leftIcon?: React.ReactNode;
   rightIcon?: React.ReactNode;
   fullWidth?: boolean;
@@ -18,6 +19,7 @@ export const Button: React.FC<ButtonProps> = ({
   variant = 'primary',
   size = 'md',
   isLoading = false,
+  loading,
   leftIcon,
   rightIcon,
   fullWidth = false,
@@ -25,6 +27,7 @@ export const Button: React.FC<ButtonProps> = ({
   disabled,
   ...props
 }) => {
+  const isActuallyLoading = loading !== undefined ? loading : isLoading;
   const baseStyles =
     'inline-flex items-center justify-center font-medium rounded-xl transition-all duration-200 select-none active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none disabled:active:scale-100 cursor-pointer';
 
@@ -54,10 +57,10 @@ export const Button: React.FC<ButtonProps> = ({
       className={`${baseStyles} ${sizeStyles[size]} ${variantStyles[variant]} ${
         fullWidth ? 'w-full' : ''
       } ${className}`}
-      disabled={disabled || isLoading}
+      disabled={disabled || isActuallyLoading}
       {...props}
     >
-      {isLoading ? (
+      {isActuallyLoading ? (
         <>
           <Loader2 className="w-4 h-4 animate-spin text-current" />
           <span>Please wait...</span>

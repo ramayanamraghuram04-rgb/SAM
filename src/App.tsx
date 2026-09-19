@@ -6,12 +6,20 @@ import { PWAInstallBanner } from './components/common/PWAInstallBanner';
 
 // Public pages
 import { LandingPage } from './pages/public/LandingPage';
+import { AdminLoginPage } from './pages/public/AdminLoginPage';
 import { TeacherLoginPage } from './pages/public/TeacherLoginPage';
-import { TeacherRegisterPage } from './pages/public/TeacherRegisterPage';
 import { StudentLoginPage } from './pages/public/StudentLoginPage';
-import { StudentRegisterPage } from './pages/public/StudentRegisterPage';
 
-// Teacher pages
+// Admin pages
+import { AdminDashboard } from './pages/admin/AdminDashboard';
+import { AdminStaffPage } from './pages/admin/AdminStaffPage';
+import { AdminStudentsPage } from './pages/admin/AdminStudentsPage';
+import { AdminSubjectsPage } from './pages/admin/AdminSubjectsPage';
+import { AdminTeachingAssignmentsPage } from './pages/admin/AdminTeachingAssignmentsPage';
+import { AdminOverviewPage } from './pages/admin/AdminOverviewPage';
+import { AdminProfilePage } from './pages/admin/AdminProfilePage';
+
+// Staff / Teacher pages
 import { TeacherDashboard } from './pages/teacher/TeacherDashboard';
 import { TeacherClassesPage } from './pages/teacher/TeacherClassesPage';
 import { TeacherClassDetailsPage } from './pages/teacher/TeacherClassDetailsPage';
@@ -34,10 +42,9 @@ import { ClassItem, ClassMember, Assignment } from './types';
 
 type PublicScreen = 
   | 'landing' 
-  | 'teacher-login' 
-  | 'teacher-register' 
-  | 'student-login' 
-  | 'student-register';
+  | 'admin-login' 
+  | 'staff-login' 
+  | 'student-login';
 
 export function App() {
   const { user, role, loading } = useAuth();
@@ -46,24 +53,26 @@ export function App() {
   const [publicScreen, setPublicScreen] = useState<PublicScreen>('landing');
 
   // Authenticated tab states
-  const [teacherTab, setTeacherTab] = useState<string>('home');
+  const [adminTab, setAdminTab] = useState<string>('home');
+  const [staffTab, setStaffTab] = useState<string>('home');
   const [studentTab, setStudentTab] = useState<string>('home');
 
-  // Drilldown states for Teacher
-  const [selectedTeacherClass, setSelectedTeacherClass] = useState<ClassItem | null>(null);
-  const [selectedTeacherAssignment, setSelectedTeacherAssignment] = useState<Assignment | null>(null);
+  // Drilldown states for Staff
+  const [selectedStaffClass, setSelectedStaffClass] = useState<ClassItem | null>(null);
+  const [selectedStaffAssignment, setSelectedStaffAssignment] = useState<Assignment | null>(null);
 
   // Drilldown states for Student
   const [selectedStudentClass, setSelectedStudentClass] = useState<ClassMember | null>(null);
   const [selectedStudentAssignment, setSelectedStudentAssignment] = useState<Assignment | null>(null);
 
-  // Reset drilldown and tabs when authentication state changes or user changes (prevents same-device leakage)
+  // Reset drilldown and tabs when authentication state changes or user changes (prevents same-device data leakage)
   useEffect(() => {
-    setSelectedTeacherClass(null);
-    setSelectedTeacherAssignment(null);
+    setSelectedStaffClass(null);
+    setSelectedStaffAssignment(null);
     setSelectedStudentClass(null);
     setSelectedStudentAssignment(null);
-    setTeacherTab('home');
+    setAdminTab('home');
+    setStaffTab('home');
     setStudentTab('home');
     if (!user) {
       setPublicScreen('landing');
@@ -81,189 +90,195 @@ export function App() {
   const renderContent = () => {
     // 1. Unauthenticated Public Flow
     if (!user || !role) {
-    switch (publicScreen) {
-      case 'teacher-login':
-        return (
-          <TeacherLoginPage
-            onSuccess={() => {}}
-            onGoToRegister={() => setPublicScreen('teacher-register')}
-            onSwitchToStudent={() => setPublicScreen('student-login')}
-            onBackToHome={() => setPublicScreen('landing')}
-          />
-        );
-      case 'teacher-register':
-        return (
-          <TeacherRegisterPage
-            onSuccess={() => {}}
-            onGoToLogin={() => setPublicScreen('teacher-login')}
-            onBackToHome={() => setPublicScreen('landing')}
-          />
-        );
-      case 'student-login':
-        return (
-          <StudentLoginPage
-            onSuccess={() => {}}
-            onGoToRegister={() => setPublicScreen('student-register')}
-            onSwitchToTeacher={() => setPublicScreen('teacher-login')}
-            onBackToHome={() => setPublicScreen('landing')}
-          />
-        );
-      case 'student-register':
-        return (
-          <StudentRegisterPage
-            onSuccess={() => {}}
-            onGoToLogin={() => setPublicScreen('student-login')}
-            onBackToHome={() => setPublicScreen('landing')}
-          />
-        );
-      case 'landing':
-      default:
-        return (
-          <LandingPage
-            onSelectRole={(r) =>
-              setPublicScreen(r === 'teacher' ? 'teacher-login' : 'student-login')
-            }
-            onGoToLogin={(r) =>
-              setPublicScreen(r === 'teacher' ? 'teacher-login' : 'student-login')
-            }
-            onGoToRegister={(r) =>
-              setPublicScreen(r === 'teacher' ? 'teacher-register' : 'student-register')
-            }
-          />
-        );
+      switch (publicScreen) {
+        case 'admin-login':
+          return (
+            <AdminLoginPage
+              onSuccess={() => {}}
+              onSwitchToStaff={() => setPublicScreen('staff-login')}
+              onSwitchToStudent={() => setPublicScreen('student-login')}
+              onBackToHome={() => setPublicScreen('landing')}
+            />
+          );
+        case 'staff-login':
+          return (
+            <TeacherLoginPage
+              onSuccess={() => {}}
+              onSwitchToAdmin={() => setPublicScreen('admin-login')}
+              onSwitchToStudent={() => setPublicScreen('student-login')}
+              onBackToHome={() => setPublicScreen('landing')}
+            />
+          );
+        case 'student-login':
+          return (
+            <StudentLoginPage
+              onSuccess={() => {}}
+              onSwitchToAdmin={() => setPublicScreen('admin-login')}
+              onSwitchToStaff={() => setPublicScreen('staff-login')}
+              onBackToHome={() => setPublicScreen('landing')}
+            />
+          );
+        case 'landing':
+        default:
+          return (
+            <LandingPage
+              onGoToLogin={(r) => {
+                if (r === 'admin') setPublicScreen('admin-login');
+                else if (r === 'staff') setPublicScreen('staff-login');
+                else setPublicScreen('student-login');
+              }}
+            />
+          );
+      }
     }
-  }
 
-  // 2. Authenticated Teacher Flow
-  if (role === 'teacher') {
-    // Handle drilldown views first
-    if (selectedTeacherAssignment) {
+    // 2. Authenticated Admin Flow
+    if (role === 'admin') {
       return (
-        <AppLayout currentTab={teacherTab} onSelectTab={(tab) => {
-          setSelectedTeacherAssignment(null);
-          setSelectedTeacherClass(null);
-          setTeacherTab(tab);
-        }}>
-          <TeacherAssignmentDetailsPage
-            assignment={selectedTeacherAssignment}
-            onBack={() => setSelectedTeacherAssignment(null)}
-          />
+        <AppLayout currentTab={adminTab} onSelectTab={(tab) => setAdminTab(tab)}>
+          {adminTab === 'home' && (
+            <AdminDashboard onNavigateTab={(tab) => setAdminTab(tab)} />
+          )}
+          {adminTab === 'staff' && <AdminStaffPage />}
+          {adminTab === 'students' && <AdminStudentsPage />}
+          {adminTab === 'subjects' && <AdminSubjectsPage />}
+          {adminTab === 'teaching' && <AdminTeachingAssignmentsPage />}
+          {adminTab === 'overview' && <AdminOverviewPage />}
+          {adminTab === 'profile' && <AdminProfilePage />}
         </AppLayout>
       );
     }
 
-    if (selectedTeacherClass) {
+    // 3. Authenticated Staff / Teacher Flow
+    if (role === 'staff' || role === 'teacher') {
+      // Handle drilldown views first
+      if (selectedStaffAssignment) {
+        return (
+          <AppLayout currentTab={staffTab} onSelectTab={(tab) => {
+            setSelectedStaffAssignment(null);
+            setSelectedStaffClass(null);
+            setStaffTab(tab);
+          }}>
+            <TeacherAssignmentDetailsPage
+              assignment={selectedStaffAssignment}
+              onBack={() => setSelectedStaffAssignment(null)}
+            />
+          </AppLayout>
+        );
+      }
+
+      if (selectedStaffClass) {
+        return (
+          <AppLayout currentTab={staffTab} onSelectTab={(tab) => {
+            setSelectedStaffClass(null);
+            setStaffTab(tab);
+          }}>
+            <TeacherClassDetailsPage
+              classItem={selectedStaffClass}
+              onBack={() => setSelectedStaffClass(null)}
+              onSelectAssignment={(asg) => setSelectedStaffAssignment(asg)}
+            />
+          </AppLayout>
+        );
+      }
+
+      // Main staff tabs
       return (
-        <AppLayout currentTab={teacherTab} onSelectTab={(tab) => {
-          setSelectedTeacherClass(null);
-          setTeacherTab(tab);
-        }}>
-          <TeacherClassDetailsPage
-            classItem={selectedTeacherClass}
-            onBack={() => setSelectedTeacherClass(null)}
-            onSelectAssignment={(asg) => setSelectedTeacherAssignment(asg)}
-          />
+        <AppLayout
+          currentTab={staffTab}
+          onSelectTab={(tab) => {
+            setSelectedStaffClass(null);
+            setSelectedStaffAssignment(null);
+            setStaffTab(tab);
+          }}
+        >
+          {staffTab === 'home' && (
+            <TeacherDashboard
+              onNavigateTab={(tab) => setStaffTab(tab)}
+              onSelectClass={(cls) => setSelectedStaffClass(cls)}
+              onSelectAssignment={(asg) => setSelectedStaffAssignment(asg)}
+            />
+          )}
+          {staffTab === 'classes' && (
+            <TeacherClassesPage
+              onSelectClass={(cls) => setSelectedStaffClass(cls)}
+            />
+          )}
+          {staffTab === 'assignments' && (
+            <TeacherAssignmentsPage
+              onSelectAssignment={(asg) => setSelectedStaffAssignment(asg)}
+            />
+          )}
+          {staffTab === 'notifications' && <TeacherNotificationsPage />}
+          {staffTab === 'profile' && <TeacherProfilePage />}
         </AppLayout>
       );
     }
 
-    // Main teacher tabs
-    return (
-      <AppLayout
-        currentTab={teacherTab}
-        onSelectTab={(tab) => {
-          setSelectedTeacherClass(null);
-          setSelectedTeacherAssignment(null);
-          setTeacherTab(tab);
-        }}
-      >
-        {teacherTab === 'home' && (
-          <TeacherDashboard
-            onNavigateTab={(tab) => setTeacherTab(tab)}
-            onSelectClass={(cls) => setSelectedTeacherClass(cls)}
-            onSelectAssignment={(asg) => setSelectedTeacherAssignment(asg)}
-          />
-        )}
-        {teacherTab === 'classes' && (
-          <TeacherClassesPage
-            onSelectClass={(cls) => setSelectedTeacherClass(cls)}
-          />
-        )}
-        {teacherTab === 'assignments' && (
-          <TeacherAssignmentsPage
-            onSelectAssignment={(asg) => setSelectedTeacherAssignment(asg)}
-          />
-        )}
-        {teacherTab === 'notifications' && <TeacherNotificationsPage />}
-        {teacherTab === 'profile' && <TeacherProfilePage />}
-      </AppLayout>
-    );
-  }
+    // 4. Authenticated Student Flow
+    if (role === 'student') {
+      if (selectedStudentAssignment) {
+        return (
+          <AppLayout currentTab={studentTab} onSelectTab={(tab) => {
+            setSelectedStudentAssignment(null);
+            setSelectedStudentClass(null);
+            setStudentTab(tab);
+          }}>
+            <StudentAssignmentDetailsPage
+              assignment={selectedStudentAssignment}
+              onBack={() => setSelectedStudentAssignment(null)}
+            />
+          </AppLayout>
+        );
+      }
 
-  // 3. Authenticated Student Flow
-  if (role === 'student') {
-    if (selectedStudentAssignment) {
+      if (selectedStudentClass) {
+        return (
+          <AppLayout currentTab={studentTab} onSelectTab={(tab) => {
+            setSelectedStudentClass(null);
+            setStudentTab(tab);
+          }}>
+            <StudentClassDetailsPage
+              classMember={selectedStudentClass}
+              onBack={() => setSelectedStudentClass(null)}
+              onSelectAssignment={(asg) => setSelectedStudentAssignment(asg)}
+            />
+          </AppLayout>
+        );
+      }
+
+      // Main student tabs
       return (
-        <AppLayout currentTab={studentTab} onSelectTab={(tab) => {
-          setSelectedStudentAssignment(null);
-          setSelectedStudentClass(null);
-          setStudentTab(tab);
-        }}>
-          <StudentAssignmentDetailsPage
-            assignment={selectedStudentAssignment}
-            onBack={() => setSelectedStudentAssignment(null)}
-          />
+        <AppLayout
+          currentTab={studentTab}
+          onSelectTab={(tab) => {
+            setSelectedStudentClass(null);
+            setSelectedStudentAssignment(null);
+            setStudentTab(tab);
+          }}
+        >
+          {studentTab === 'home' && (
+            <StudentDashboard
+              onNavigateTab={(tab) => setStudentTab(tab)}
+              onSelectAssignment={(asg) => setSelectedStudentAssignment(asg)}
+            />
+          )}
+          {studentTab === 'classes' && (
+            <StudentClassesPage
+              onSelectClass={(cls) => setSelectedStudentClass(cls)}
+            />
+          )}
+          {studentTab === 'assignments' && (
+            <StudentAssignmentsPage
+              onSelectAssignment={(asg) => setSelectedStudentAssignment(asg)}
+            />
+          )}
+          {studentTab === 'marks' && <StudentMarksPage />}
+          {studentTab === 'notifications' && <StudentNotificationsPage />}
+          {studentTab === 'profile' && <StudentProfilePage />}
         </AppLayout>
       );
     }
-
-    if (selectedStudentClass) {
-      return (
-        <AppLayout currentTab={studentTab} onSelectTab={(tab) => {
-          setSelectedStudentClass(null);
-          setStudentTab(tab);
-        }}>
-          <StudentClassDetailsPage
-            classMember={selectedStudentClass}
-            onBack={() => setSelectedStudentClass(null)}
-            onSelectAssignment={(asg) => setSelectedStudentAssignment(asg)}
-          />
-        </AppLayout>
-      );
-    }
-
-    // Main student tabs
-    return (
-      <AppLayout
-        currentTab={studentTab}
-        onSelectTab={(tab) => {
-          setSelectedStudentClass(null);
-          setSelectedStudentAssignment(null);
-          setStudentTab(tab);
-        }}
-      >
-        {studentTab === 'home' && (
-          <StudentDashboard
-            onNavigateTab={(tab) => setStudentTab(tab)}
-            onSelectAssignment={(asg) => setSelectedStudentAssignment(asg)}
-          />
-        )}
-        {studentTab === 'classes' && (
-          <StudentClassesPage
-            onSelectClass={(cls) => setSelectedStudentClass(cls)}
-          />
-        )}
-        {studentTab === 'assignments' && (
-          <StudentAssignmentsPage
-            onSelectAssignment={(asg) => setSelectedStudentAssignment(asg)}
-          />
-        )}
-        {studentTab === 'marks' && <StudentMarksPage />}
-        {studentTab === 'notifications' && <StudentNotificationsPage />}
-        {studentTab === 'profile' && <StudentProfilePage />}
-      </AppLayout>
-    );
-  }
 
     return null;
   };

@@ -1,6 +1,8 @@
 // Core Domain Types for SAM (Smart Assignment Manager)
 
-export type UserRole = 'teacher' | 'student';
+export type UserRole = 'admin' | 'staff' | 'student' | 'teacher';
+
+export type UserStatus = 'active' | 'disabled';
 
 export type Semester = '1st' | '3rd' | '4th' | '5th';
 
@@ -11,20 +13,55 @@ export interface BaseUser {
   role: UserRole;
   name: string;
   department: Department;
+  status: UserStatus;
   createdAt: string;
 }
 
-export interface TeacherUser extends BaseUser {
-  role: 'teacher';
-  mobile: string; // 10-digit Indian mobile number
+export interface AdminUser extends BaseUser {
+  role: 'admin';
+  mobile: string;
 }
+
+export interface StaffUser extends BaseUser {
+  role: 'staff' | 'teacher';
+  mobile: string; // 10-digit Indian mobile number
+  assignedSubjects?: string[]; // IDs or names of subjects
+  assignedSemesters?: Semester[];
+}
+
+// TeacherUser alias for backward compatibility with existing components
+export type TeacherUser = StaffUser;
 
 export interface StudentUser extends BaseUser {
   role: 'student';
   pin: string; // Diploma PIN, e.g., "24170-CM-001"
+  semester: Semester; // 1st, 3rd, 4th, 5th
 }
 
-export type AppUser = TeacherUser | StudentUser;
+export type AppUser = AdminUser | StaffUser | StudentUser;
+
+// Academic Subject Model
+export interface Subject {
+  id: string;
+  name: string;
+  code?: string;
+  semester: Semester;
+  department: Department;
+  createdAt: string;
+}
+
+// Staff Teaching Assignment (Admin assigns Staff -> Semester + Subject)
+export interface TeachingAssignment {
+  id: string;
+  staffId: string;
+  staffName: string;
+  staffMobile: string;
+  semester: Semester;
+  subjectId: string;
+  subjectName: string;
+  department: Department;
+  createdAt: string;
+}
 
 export interface ClassItem {
   id: string;
@@ -116,7 +153,9 @@ export type NotificationType =
   | 'assignment_new' 
   | 'submission_new' 
   | 'submission_graded' 
-  | 'submission_returned';
+  | 'submission_returned'
+  | 'account_status'
+  | 'system';
 
 export interface AppNotification {
   id: string;

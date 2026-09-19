@@ -9,15 +9,15 @@ import { DEPARTMENT } from '../../config/constants';
 
 interface TeacherLoginPageProps {
   onSuccess: () => void;
-  onGoToRegister: () => void;
   onSwitchToStudent: () => void;
+  onSwitchToAdmin?: () => void;
   onBackToHome: () => void;
 }
 
 export const TeacherLoginPage: React.FC<TeacherLoginPageProps> = ({
   onSuccess,
-  onGoToRegister,
   onSwitchToStudent,
+  onSwitchToAdmin,
   onBackToHome,
 }) => {
   const { setUserManually } = useAuth();
@@ -30,7 +30,8 @@ export const TeacherLoginPage: React.FC<TeacherLoginPageProps> = ({
     e.preventDefault();
     setError('');
 
-    if (!mobile.trim()) {
+    const clean = mobile.replace(/\D/g, '');
+    if (!clean || clean.length !== 10) {
       setError('Please enter your 10-digit mobile number.');
       return;
     }
@@ -42,7 +43,7 @@ export const TeacherLoginPage: React.FC<TeacherLoginPageProps> = ({
 
     setIsLoading(true);
     try {
-      const res = await authService.loginTeacher(mobile.trim(), password);
+      const res = await authService.loginStaff(clean, password);
       if (res.error || !res.user) {
         setError(res.error || 'Failed to sign in.');
       } else {
@@ -50,7 +51,7 @@ export const TeacherLoginPage: React.FC<TeacherLoginPageProps> = ({
         onSuccess();
       }
     } catch {
-      setError('Something went wrong. Please check your network and try again.');
+      setError('Something went wrong. Please check your connection and try again.');
     } finally {
       setIsLoading(false);
     }
@@ -65,7 +66,7 @@ export const TeacherLoginPage: React.FC<TeacherLoginPageProps> = ({
           className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-900 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
-          <span>Back to Home</span>
+          <span>Back to SAM Home</span>
         </button>
 
         <Card className="p-6 sm:p-8 space-y-6">
@@ -75,10 +76,10 @@ export const TeacherLoginPage: React.FC<TeacherLoginPageProps> = ({
               <GraduationCap className="w-6 h-6" />
             </div>
             <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
-              Teacher Sign In
+              Staff / Teacher Sign In
             </h2>
             <p className="text-xs text-slate-500">
-              Department of <span className="font-bold text-blue-600">{DEPARTMENT}</span> • Single Dashboard Access
+              Department of <span className="font-bold text-blue-600">{DEPARTMENT}</span> • Single Staff Account Access
             </p>
           </div>
 
@@ -93,14 +94,15 @@ export const TeacherLoginPage: React.FC<TeacherLoginPageProps> = ({
             {/* Mobile Number */}
             <div>
               <Input
-                label="Mobile Number"
+                label="Registered Mobile Number"
                 type="tel"
-                placeholder="10-digit mobile number (e.g. 9876543210)"
+                placeholder="10-digit mobile (e.g. 9876543210)"
                 maxLength={10}
                 value={mobile}
                 onChange={(e) => setMobile(e.target.value.replace(/\D/g, ''))}
-                leftIcon={<Phone className="w-4 h-4" />}
-                helperText="No email required. Log in using your mobile number."
+                leftIcon={<Phone className="w-4 h-4 text-slate-400" />}
+                autoFocus
+                required
               />
             </div>
 
@@ -112,7 +114,9 @@ export const TeacherLoginPage: React.FC<TeacherLoginPageProps> = ({
                 placeholder="Enter your password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                leftIcon={<Lock className="w-4 h-4" />}
+                leftIcon={<Lock className="w-4 h-4 text-slate-400" />}
+                defaultVisible={true}
+                required
               />
             </div>
 
@@ -121,31 +125,34 @@ export const TeacherLoginPage: React.FC<TeacherLoginPageProps> = ({
               variant="primary"
               size="lg"
               fullWidth
-              isLoading={isLoading}
+              loading={isLoading}
             >
-              Sign In to Teacher Dashboard
+              Sign In to Staff Dashboard
             </Button>
           </form>
 
-          {/* Registration link */}
-          <div className="pt-4 border-t border-slate-100 text-center space-y-3">
-            <p className="text-xs text-slate-500">
-              New Teacher?{' '}
+          {/* Notice: No Public Registration */}
+          <div className="p-3 rounded-lg bg-blue-50/70 border border-blue-100 text-center text-[11px] text-blue-700">
+            Staff accounts are provisioned exclusively by the College Administrator.
+          </div>
+
+          {/* Switch links */}
+          <div className="pt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+            {onSwitchToAdmin && (
               <button
                 type="button"
-                onClick={onGoToRegister}
-                className="font-bold text-blue-600 hover:text-blue-700 hover:underline"
+                onClick={onSwitchToAdmin}
+                className="hover:text-slate-900 font-medium"
               >
-                Register Teacher Account
+                ← Admin Login
               </button>
-            </p>
-
+            )}
             <button
               type="button"
               onClick={onSwitchToStudent}
-              className="text-xs font-medium text-slate-400 hover:text-slate-600 block mx-auto"
+              className="hover:text-indigo-600 font-medium ml-auto"
             >
-              Are you a student? Click here for Student Login
+              Student Login →
             </button>
           </div>
         </Card>
