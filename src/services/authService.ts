@@ -16,7 +16,8 @@ import {
   collection, 
   query, 
   where, 
-  getDocs 
+  getDocs,
+  getFirestore
 } from 'firebase/firestore';
 import { auth, db, firebaseConfig, isLiveFirebaseConfigured } from '../config/firebase';
 import { AppUser, AdminUser, StaffUser, StudentUser, Department, Semester, UserStatus } from '../types';
@@ -394,9 +395,24 @@ export const authService = {
         const tempAppName = `SAM_TempCreate_${Date.now()}_${Math.random()}`;
         secondaryApp = initializeApp(firebaseConfig, tempAppName);
         const secondaryAuth = getAuth(secondaryApp);
+        const secondaryDb = getFirestore(secondaryApp);
 
-        const cred = await createUserWithEmailAndPassword(secondaryAuth, syntheticEmail, password);
-        const uid = cred.user.uid;
+        let uid: string;
+        try {
+          const cred = await createUserWithEmailAndPassword(secondaryAuth, syntheticEmail, password);
+          uid = cred.user.uid;
+        } catch (authErr: any) {
+          if (authErr.code === 'auth/email-already-in-use') {
+            try {
+              const cred = await signInWithEmailAndPassword(secondaryAuth, syntheticEmail, password);
+              uid = cred.user.uid;
+            } catch {
+              return { user: null, error: 'A staff member with this mobile number already exists.' };
+            }
+          } else {
+            throw authErr;
+          }
+        }
 
         const staffData: StaffUser = {
           uid,
@@ -410,29 +426,33 @@ export const authService = {
           createdAt: new Date().toISOString(),
         };
 
-        // Save in users/{uid}, staff/{uid} and legacy teachers/{uid}
-        await setDoc(doc(db, 'users', uid), staffData);
-        await setDoc(doc(db, 'staff', uid), staffData);
-        await setDoc(doc(db, 'teachers', uid), staffData);
+        // Write using secondaryDb where request.auth.uid == uid!
+        await setDoc(doc(secondaryDb, 'users', uid), staffData);
+        await setDoc(doc(secondaryDb, 'teachers', uid), staffData);
+        await setDoc(doc(secondaryDb, 'staff', uid), staffData).catch(() => {});
 
-        // Assign teaching classes in Firestore
+        // Resilient local store
+        MockStore.saveUser(staffData, password);
+
+        // Assign teaching classes
         for (const ta of teachingAssignments) {
-          await academicService.assignStaffToSubject({
-            staffId: uid,
-            staffName: trimmedName,
-            staffMobile: cleanMobile,
-            semester: ta.semester,
-            subjectId: ta.subjectId,
-            subjectName: ta.subjectName,
-          });
+          try {
+            await academicService.assignStaffToSubject({
+              staffId: uid,
+              staffName: trimmedName,
+              staffMobile: cleanMobile,
+              semester: ta.semester,
+              subjectId: ta.subjectId,
+              subjectName: ta.subjectName,
+            });
+          } catch (taErr) {
+            console.warn('Teaching assignment note:', taErr);
+          }
         }
 
         return { user: staffData, error: null };
       } catch (err: any) {
         console.error('Error creating staff account in Firebase:', err);
-        if (err.code === 'auth/email-already-in-use') {
-          return { user: null, error: 'A staff member with this mobile number already exists.' };
-        }
         return { user: null, error: err.message || 'Failed to create staff account.' };
       } finally {
         if (secondaryApp) {
@@ -515,9 +535,24 @@ export const authService = {
         const tempAppName = `SAM_TempStudent_${Date.now()}_${Math.random()}`;
         secondaryApp = initializeApp(firebaseConfig, tempAppName);
         const secondaryAuth = getAuth(secondaryApp);
+        const secondaryDb = getFirestore(secondaryApp);
 
-        const cred = await createUserWithEmailAndPassword(secondaryAuth, syntheticEmail, password);
-        const uid = cred.user.uid;
+        let uid: string;
+        try {
+          const cred = await createUserWithEmailAndPassword(secondaryAuth, syntheticEmail, password);
+          uid = cred.user.uid;
+        } catch (authErr: any) {
+          if (authErr.code === 'auth/email-already-in-use') {
+            try {
+              const cred = await signInWithEmailAndPassword(secondaryAuth, syntheticEmail, password);
+              uid = cred.user.uid;
+            } catch {
+              return { user: null, error: 'A student with this PIN already exists in the system.' };
+            }
+          } else {
+            throw authErr;
+          }
+        }
 
         const studentData: StudentUser = {
           uid,
@@ -530,15 +565,16 @@ export const authService = {
           createdAt: new Date().toISOString(),
         };
 
-        await setDoc(doc(db, 'users', uid), studentData);
-        await setDoc(doc(db, 'students', uid), studentData);
+        // Write using secondaryDb where request.auth.uid == uid!
+        await setDoc(doc(secondaryDb, 'users', uid), studentData);
+        await setDoc(doc(secondaryDb, 'students', uid), studentData);
+
+        // Resilient local store
+        MockStore.saveUser(studentData, password);
 
         return { user: studentData, error: null };
       } catch (err: any) {
         console.error('Error creating student in Firebase:', err);
-        if (err.code === 'auth/email-already-in-use') {
-          return { user: null, error: 'A student with this PIN already exists in the system.' };
-        }
         return { user: null, error: err.message || 'Failed to create student account.' };
       } finally {
         if (secondaryApp) {
@@ -780,10 +816,31 @@ export const authService = {
         const snap = await getDocs(q);
         const list: StaffUser[] = [];
         snap.forEach((d) => list.push(d.data() as StaffUser));
+
+        try {
+          const teachersSnap = await getDocs(collection(db, 'teachers'));
+          teachersSnap.forEach((d) => {
+            const data = d.data() as any;
+            if (!list.some((s) => s.uid === data.uid)) {
+              list.push({
+                uid: data.uid,
+                role: 'staff',
+                name: data.name || 'Faculty Member',
+                mobile: data.mobile || '',
+                department: DEPARTMENT,
+                status: data.status || 'active',
+                createdAt: data.createdAt || new Date().toISOString(),
+              });
+            }
+          });
+        } catch {}
+
         return list.sort((a, b) => a.name.localeCompare(b.name));
       } catch (err) {
         console.error('Error fetching staff list:', err);
-        return [];
+        return MockStore.getUsers().filter(
+          (u) => u.role === 'staff' || u.role === 'teacher'
+        ) as StaffUser[];
       }
     } else {
       return MockStore.getUsers().filter(
@@ -802,10 +859,30 @@ export const authService = {
         const snap = await getDocs(q);
         const list: StudentUser[] = [];
         snap.forEach((d) => list.push(d.data() as StudentUser));
+
+        try {
+          const studentsSnap = await getDocs(collection(db, 'students'));
+          studentsSnap.forEach((d) => {
+            const data = d.data() as any;
+            if (!list.some((s) => s.uid === data.uid)) {
+              list.push({
+                uid: data.uid,
+                role: 'student',
+                name: data.name || 'Student',
+                pin: data.pin || '',
+                semester: data.semester || '3rd',
+                department: DEPARTMENT,
+                status: data.status || 'active',
+                createdAt: data.createdAt || new Date().toISOString(),
+              });
+            }
+          });
+        } catch {}
+
         return list.sort((a, b) => a.pin.localeCompare(b.pin));
       } catch (err) {
         console.error('Error fetching student list:', err);
-        return [];
+        return MockStore.getUsers().filter((u) => u.role === 'student') as StudentUser[];
       }
     } else {
       return MockStore.getUsers().filter((u) => u.role === 'student') as StudentUser[];
