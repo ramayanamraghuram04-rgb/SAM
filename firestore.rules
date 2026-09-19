@@ -1,0 +1,130 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function getUserRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+
+    function isTeacher() {
+      return isAuthenticated() && getUserRole() == 'teacher';
+    }
+
+    function isStudent() {
+      return isAuthenticated() && getUserRole() == 'student';
+    }
+
+    // 1. Users collection
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && request.auth.uid == userId;
+      allow update: if isOwner(userId);
+      allow delete: if false;
+    }
+
+    // 2. Teachers collection
+    match /teachers/{teacherId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isOwner(teacherId);
+      allow delete: if false;
+    }
+
+    // 3. Students collection
+    match /students/{studentId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isOwner(studentId);
+      allow delete: if false;
+    }
+
+    // 4. Classes collection
+    match /classes/{classId} {
+      // Any authenticated user can read classes (or students enrolled in them)
+      allow read: if isAuthenticated();
+      // Only the teacher who owns the class can create or modify it
+      allow create: if isTeacher() && request.resource.data.teacherId == request.auth.uid;
+      allow update: if isTeacher() && resource.data.teacherId == request.auth.uid;
+      allow delete: if isTeacher() && resource.data.teacherId == request.auth.uid;
+    }
+
+    // 5. Class memberships collection
+    match /classMembers/{membershipId} {
+      allow read: if isAuthenticated() && (
+        resource.data.studentId == request.auth.uid || 
+        resource.data.teacherId == request.auth.uid
+      );
+      // Student creates membership upon accepting invitation
+      allow create: if isStudent() && request.resource.data.studentId == request.auth.uid;
+      // Teacher or student can delete/leave membership
+      allow delete: if isAuthenticated() && (
+        resource.data.studentId == request.auth.uid || 
+        resource.data.teacherId == request.auth.uid
+      );
+    }
+
+    // 6. Invitations collection
+    match /invitations/{invitationId} {
+      allow read: if isAuthenticated() && (
+        resource.data.studentId == request.auth.uid || 
+        resource.data.teacherId == request.auth.uid
+      );
+      // Teacher creates invitation
+      allow create: if isTeacher() && request.resource.data.teacherId == request.auth.uid;
+      // Student can update status (accept/decline)
+      allow update: if isStudent() && resource.data.studentId == request.auth.uid;
+      allow delete: if isTeacher() && resource.data.teacherId == request.auth.uid;
+    }
+
+    // 7. Assignments collection
+    match /assignments/{assignmentId} {
+      // Authenticated users can read assignments
+      allow read: if isAuthenticated();
+      // Only the teacher owning the class can create/update assignments
+      allow create: if isTeacher() && request.resource.data.teacherId == request.auth.uid;
+      allow update, delete: if isTeacher() && resource.data.teacherId == request.auth.uid;
+    }
+
+    // 8. Submissions collection
+    match /submissions/{submissionId} {
+      // Students can read ONLY their own submissions
+      // Teachers can read submissions for classes they teach
+      allow read: if isAuthenticated() && (
+        resource.data.studentId == request.auth.uid || 
+        resource.data.teacherId == request.auth.uid
+      );
+
+      // Student creates submission (cannot set marks)
+      allow create: if isStudent() && 
+        request.resource.data.studentId == request.auth.uid &&
+        request.resource.data.marks == null;
+
+      // Student can update their submission driveLink / resubmit (cannot tamper with marks)
+      // Teacher can grade the submission (set marks and feedback)
+      allow update: if isAuthenticated() && (
+        (isStudent() && resource.data.studentId == request.auth.uid && request.resource.data.marks == resource.data.marks) ||
+        (isTeacher() && resource.data.teacherId == request.auth.uid)
+      );
+
+      allow delete: if false;
+    }
+
+    // 9. Notifications collection
+    match /notifications/{notificationId} {
+      // Users can ONLY read notifications sent to them
+      allow read: if isAuthenticated() && resource.data.recipientUid == request.auth.uid;
+      // Authenticated users can create notifications targeted to specific recipients
+      allow create: if isAuthenticated();
+      // Recipient can mark notification as read
+      allow update: if isAuthenticated() && resource.data.recipientUid == request.auth.uid;
+      allow delete: if isAuthenticated() && resource.data.recipientUid == request.auth.uid;
+    }
+  }
+}
