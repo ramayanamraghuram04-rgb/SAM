@@ -60,14 +60,7 @@ export const authService = {
 
     if (isLiveFirebaseConfigured) {
       try {
-        // Check if mobile already registered in Firestore
-        const q = query(collection(db, 'users'), where('mobile', '==', cleanMobile));
-        const querySnapshot = await getDocs(q);
-        if (!querySnapshot.empty) {
-          return { user: null, error: 'Mobile number is already registered. Please log in.' };
-        }
-
-        // Create Firebase Auth user
+        // Create Firebase Auth user directly (enforces mobile uniqueness via synthetic email)
         const cred = await createUserWithEmailAndPassword(auth, syntheticEmail, password);
         const uid = cred.user.uid;
 
@@ -80,17 +73,25 @@ export const authService = {
           createdAt: new Date().toISOString(),
         };
 
-        // Store profile in users/{uid} and teachers/{uid}
-        await setDoc(doc(db, 'users', uid), teacherData);
-        await setDoc(doc(db, 'teachers', uid), teacherData);
-
-        return { user: teacherData, error: null };
+        try {
+          // Store profile in users/{uid} and teachers/{uid}
+          await setDoc(doc(db, 'users', uid), teacherData);
+          await setDoc(doc(db, 'teachers', uid), teacherData);
+          return { user: teacherData, error: null };
+        } catch (dbErr: any) {
+          console.error('Firestore teacher profile error:', dbErr);
+          try { await cred.user.delete(); } catch (_) {}
+          return { user: null, error: 'Failed to save teacher profile: ' + (dbErr.message || 'Database error') };
+        }
       } catch (err: any) {
         console.error('Teacher registration error:', err);
         if (err.code === 'auth/email-already-in-use') {
           return { user: null, error: 'Mobile number is already registered. Please log in.' };
         }
-        return { user: null, error: 'Failed to create teacher account. Please try again.' };
+        if (err.code === 'auth/weak-password') {
+          return { user: null, error: 'Password is too weak. Please use at least 6 characters.' };
+        }
+        return { user: null, error: err.message || 'Failed to create teacher account. Please try again.' };
       }
     } else {
       // Mock / Offline mode fallback
@@ -212,14 +213,7 @@ export const authService = {
 
     if (isLiveFirebaseConfigured) {
       try {
-        // Check if PIN already registered in Firestore
-        const q = query(collection(db, 'users'), where('pin', '==', normalizedPIN));
-        const querySnapshot = await getDocs(q);
-        if (!querySnapshot.empty) {
-          return { user: null, error: 'This PIN is already registered. Please log in.' };
-        }
-
-        // Create Firebase Auth user
+        // Create Firebase Auth user directly (enforces PIN uniqueness via synthetic email)
         const cred = await createUserWithEmailAndPassword(auth, syntheticEmail, password);
         const uid = cred.user.uid;
 
@@ -232,17 +226,25 @@ export const authService = {
           createdAt: new Date().toISOString(),
         };
 
-        // Store profile in users/{uid} and students/{uid}
-        await setDoc(doc(db, 'users', uid), studentData);
-        await setDoc(doc(db, 'students', uid), studentData);
-
-        return { user: studentData, error: null };
+        try {
+          // Store profile in users/{uid} and students/{uid}
+          await setDoc(doc(db, 'users', uid), studentData);
+          await setDoc(doc(db, 'students', uid), studentData);
+          return { user: studentData, error: null };
+        } catch (dbErr: any) {
+          console.error('Firestore student profile error:', dbErr);
+          try { await cred.user.delete(); } catch (_) {}
+          return { user: null, error: 'Failed to save student profile: ' + (dbErr.message || 'Database error') };
+        }
       } catch (err: any) {
         console.error('Student registration error:', err);
         if (err.code === 'auth/email-already-in-use') {
           return { user: null, error: 'This PIN is already registered. Please log in.' };
         }
-        return { user: null, error: 'Failed to create student account. Please try again.' };
+        if (err.code === 'auth/weak-password') {
+          return { user: null, error: 'Password is too weak. Please use at least 6 characters.' };
+        }
+        return { user: null, error: err.message || 'Failed to create student account. Please try again.' };
       }
     } else {
       // Mock / Offline fallback
