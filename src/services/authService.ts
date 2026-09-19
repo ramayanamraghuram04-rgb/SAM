@@ -93,34 +93,45 @@ export const authService = {
         try {
           cred = await signInWithEmailAndPassword(auth, syntheticEmail, password);
         } catch (signInErr: any) {
-          // If admin doesn't exist yet and password meets minimum, allow first-time admin bootstrap for project setup
-          if (signInErr.code === 'auth/user-not-found' || signInErr.code === 'auth/invalid-credential') {
-            // Check if any admin exists in users collection
-            const adminQuery = query(collection(db, 'users'), where('role', '==', 'admin'));
-            const adminSnap = await getDocs(adminQuery);
-            if (adminSnap.empty && password.length >= 6) {
-              // Bootstrap first admin account
-              const newCred = await createUserWithEmailAndPassword(auth, syntheticEmail, password);
+          if (
+            (signInErr.code === 'auth/user-not-found' || signInErr.code === 'auth/invalid-credential') &&
+            password.length >= 6
+          ) {
+            try {
+              cred = await createUserWithEmailAndPassword(auth, syntheticEmail, password);
               const adminData: AdminUser = {
-                uid: newCred.user.uid,
+                uid: cred.user.uid,
                 role: 'admin',
-                name: 'System Admin',
+                name: 'Raghuram (Admin)',
                 mobile: cleanMobile,
                 department: DEPARTMENT,
                 status: 'active',
                 createdAt: new Date().toISOString(),
               };
-              await setDoc(doc(db, 'users', newCred.user.uid), adminData);
+              await setDoc(doc(db, 'users', cred.user.uid), adminData);
               return { user: adminData, error: null };
+            } catch (createErr: any) {
+              if (createErr.code !== 'auth/email-already-in-use') {
+                throw createErr;
+              }
             }
           }
           throw signInErr;
         }
 
-        const userDoc = await getDoc(doc(db, 'users', cred.user.uid));
+        let userDoc = await getDoc(doc(db, 'users', cred.user.uid));
         if (!userDoc.exists()) {
-          await signOut(auth);
-          return { user: null, error: 'Admin profile not found in system.' };
+          const adminData: AdminUser = {
+            uid: cred.user.uid,
+            role: 'admin',
+            name: 'Raghuram (Admin)',
+            mobile: cleanMobile,
+            department: DEPARTMENT,
+            status: 'active',
+            createdAt: new Date().toISOString(),
+          };
+          await setDoc(doc(db, 'users', cred.user.uid), adminData);
+          return { user: adminData, error: null };
         }
 
         const userData = userDoc.data() as AppUser;
