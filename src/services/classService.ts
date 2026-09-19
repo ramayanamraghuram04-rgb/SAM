@@ -81,7 +81,11 @@ export const classService = {
 
         // Augment with counts
         for (const cls of classes) {
-          const memberQ = query(collection(db, 'classMembers'), where('classId', '==', cls.id));
+          const memberQ = query(
+            collection(db, 'classMembers'), 
+            where('teacherId', '==', teacherId),
+            where('classId', '==', cls.id)
+          );
           const memberSnap = await getDocs(memberQ);
           cls.studentCount = memberSnap.size;
 
@@ -160,16 +164,19 @@ export const classService = {
   /**
    * Fetch all enrolled students in a class
    */
-  async getClassStudents(classId: string): Promise<ClassMember[]> {
+  async getClassStudents(classId: string, teacherId?: string): Promise<ClassMember[]> {
     if (!classId) return [];
 
     if (isLiveFirebaseConfigured) {
       try {
-        const q = query(
-          collection(db, 'classMembers'),
+        const constraints: any[] = [
           where('classId', '==', classId),
           where('status', '==', 'active')
-        );
+        ];
+        if (teacherId) {
+          constraints.unshift(where('teacherId', '==', teacherId));
+        }
+        const q = query(collection(db, 'classMembers'), ...constraints);
         const snap = await getDocs(q);
         const list: ClassMember[] = [];
         snap.forEach((d) => list.push(d.data() as ClassMember));

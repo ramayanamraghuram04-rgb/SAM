@@ -59,12 +59,9 @@ service cloud.firestore {
 
     // 5. Class memberships collection
     match /classMembers/{membershipId} {
-      allow read: if isAuthenticated() && (
-        resource.data.studentId == request.auth.uid || 
-        resource.data.teacherId == request.auth.uid
-      );
+      allow read: if isAuthenticated();
       // Student creates membership upon accepting invitation
-      allow create: if isStudent() && request.resource.data.studentId == request.auth.uid;
+      allow create: if isAuthenticated() && request.resource.data.studentId == request.auth.uid;
       // Teacher or student can delete/leave membership
       allow delete: if isAuthenticated() && (
         resource.data.studentId == request.auth.uid || 
@@ -74,15 +71,12 @@ service cloud.firestore {
 
     // 6. Invitations collection
     match /invitations/{invitationId} {
-      allow read: if isAuthenticated() && (
-        resource.data.studentId == request.auth.uid || 
-        resource.data.teacherId == request.auth.uid
-      );
+      allow read: if isAuthenticated();
       // Teacher creates invitation
-      allow create: if isTeacher() && request.resource.data.teacherId == request.auth.uid;
+      allow create: if isAuthenticated() && request.resource.data.teacherId == request.auth.uid;
       // Student can update status (accept/decline)
-      allow update: if isStudent() && resource.data.studentId == request.auth.uid;
-      allow delete: if isTeacher() && resource.data.teacherId == request.auth.uid;
+      allow update: if isAuthenticated() && resource.data.studentId == request.auth.uid;
+      allow delete: if isAuthenticated() && resource.data.teacherId == request.auth.uid;
     }
 
     // 7. Assignments collection

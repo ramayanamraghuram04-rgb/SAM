@@ -60,6 +60,7 @@ export const inviteService = {
         // 1. Check if student is already an active member
         const memberQ = query(
           collection(db, 'classMembers'),
+          where('teacherId', '==', teacherId),
           where('classId', '==', classItem.id),
           where('studentId', '==', student.uid)
         );
@@ -71,6 +72,7 @@ export const inviteService = {
         // 2. Check if already invited and pending
         const inviteQ = query(
           collection(db, 'invitations'),
+          where('teacherId', '==', teacherId),
           where('classId', '==', classItem.id),
           where('studentId', '==', student.uid),
           where('status', '==', 'pending')

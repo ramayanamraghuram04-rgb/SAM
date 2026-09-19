@@ -185,15 +185,16 @@ export const submissionService = {
   /**
    * Fetch submissions for a specific assignment (for teacher review)
    */
-  async getAssignmentSubmissions(assignmentId: string): Promise<Submission[]> {
+  async getAssignmentSubmissions(assignmentId: string, teacherId?: string): Promise<Submission[]> {
     if (!assignmentId) return [];
 
     if (isLiveFirebaseConfigured) {
       try {
-        const q = query(
-          collection(db, 'submissions'),
-          where('assignmentId', '==', assignmentId)
-        );
+        const constraints: any[] = [where('assignmentId', '==', assignmentId)];
+        if (teacherId) {
+          constraints.unshift(where('teacherId', '==', teacherId));
+        }
+        const q = query(collection(db, 'submissions'), ...constraints);
         const snap = await getDocs(q);
         const list: Submission[] = [];
         snap.forEach((d) => list.push(d.data() as Submission));
