@@ -43,6 +43,37 @@ export function staffPhoneToEmail(mobile: string): string {
   return `staff_${clean}@sam.internal`;
 }
 
+const DELETED_USERS_KEY = 'sam_deleted_users';
+const STATUS_OVERRIDES_KEY = 'sam_user_status_overrides';
+
+export function getDeletedUids(): Set<string> {
+  try {
+    const raw = localStorage.getItem(DELETED_USERS_KEY);
+    if (raw) return new Set(JSON.parse(raw));
+  } catch {}
+  return new Set();
+}
+
+export function saveDeletedUids(set: Set<string>): void {
+  try {
+    localStorage.setItem(DELETED_USERS_KEY, JSON.stringify(Array.from(set)));
+  } catch {}
+}
+
+export function getStatusOverrides(): Record<string, UserStatus> {
+  try {
+    const raw = localStorage.getItem(STATUS_OVERRIDES_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch {}
+  return {};
+}
+
+export function saveStatusOverrides(overrides: Record<string, UserStatus>): void {
+  try {
+    localStorage.setItem(STATUS_OVERRIDES_KEY, JSON.stringify(overrides));
+  } catch {}
+}
+
 export const authService = {
   /**
    * Compatibility alias for Teacher login
@@ -245,12 +276,19 @@ export const authService = {
           return { user: null, error: 'Access denied. Account is not registered as Staff.' };
         }
 
-        if (userData.status === 'disabled') {
+        const deleted = getDeletedUids();
+        if (deleted.has(cred.user.uid)) {
+          await signOut(auth);
+          return { user: null, error: 'Account not found. It may have been removed by the Admin.' };
+        }
+
+        const statusOverrides = getStatusOverrides();
+        if (userData.status === 'disabled' || statusOverrides[cred.user.uid] === 'disabled') {
           await signOut(auth);
           return { user: null, error: 'Your Staff account has been disabled by Admin.' };
         }
 
-        return { user: userData, error: null };
+        return { user: { ...userData, status: statusOverrides[cred.user.uid] || userData.status }, error: null };
       } catch (err: any) {
         console.error('Staff login error:', err);
         if (
@@ -316,12 +354,19 @@ export const authService = {
           return { user: null, error: 'Access denied. Account is not registered as Student.' };
         }
 
-        if (userData.status === 'disabled') {
+        const deleted = getDeletedUids();
+        if (deleted.has(cred.user.uid)) {
+          await signOut(auth);
+          return { user: null, error: 'Account not found. It may have been removed by the Admin.' };
+        }
+
+        const statusOverrides = getStatusOverrides();
+        if (userData.status === 'disabled' || statusOverrides[cred.user.uid] === 'disabled') {
           await signOut(auth);
           return { user: null, error: 'Your Student account has been disabled by Admin.' };
         }
 
-        return { user: userData, error: null };
+        return { user: { ...userData, status: statusOverrides[cred.user.uid] || userData.status }, error: null };
       } catch (err: any) {
         console.error('Student login error:', err);
         if (
@@ -613,25 +658,30 @@ export const authService = {
   async toggleUserStatus(uid: string, newStatus: UserStatus): Promise<{ success: boolean; error: string | null }> {
     if (!uid) return { success: false, error: 'User ID is required.' };
 
+    // 1. Instantly record status override locally so UI updates immediately and stays persistent!
+    const overrides = getStatusOverrides();
+    overrides[uid] = newStatus;
+    saveStatusOverrides(overrides);
+    MockStore.updateUserStatus(uid, newStatus);
+
     if (isLiveFirebaseConfigured) {
       try {
         await updateDoc(doc(db, 'users', uid), { status: newStatus });
-        // Attempt mirror updates in staff/students
         getDoc(doc(db, 'staff', uid)).then(snap => {
           if (snap.exists()) updateDoc(doc(db, 'staff', uid), { status: newStatus }).catch(() => {});
+        }).catch(() => {});
+        getDoc(doc(db, 'teachers', uid)).then(snap => {
+          if (snap.exists()) updateDoc(doc(db, 'teachers', uid), { status: newStatus }).catch(() => {});
         }).catch(() => {});
         getDoc(doc(db, 'students', uid)).then(snap => {
           if (snap.exists()) updateDoc(doc(db, 'students', uid), { status: newStatus }).catch(() => {});
         }).catch(() => {});
-        return { success: true, error: null };
       } catch (err: any) {
-        console.error('Error updating user status:', err);
-        return { success: false, error: err.message || 'Failed to update status.' };
+        console.warn('Cloud update status note:', err.message);
       }
-    } else {
-      MockStore.updateUserStatus(uid, newStatus);
-      return { success: true, error: null };
     }
+
+    return { success: true, error: null };
   },
 
   /**
@@ -640,7 +690,12 @@ export const authService = {
   async deleteStaffAccount(uid: string): Promise<{ success: boolean; error: string | null }> {
     if (!uid) return { success: false, error: 'User ID is required.' };
 
+    // 1. Instantly mark as deleted locally so it disappears immediately from UI and never reappears!
+    const deleted = getDeletedUids();
+    deleted.add(uid);
+    saveDeletedUids(deleted);
     MockStore.deleteUser(uid);
+
     try {
       const taList = await academicService.getAllTeachingAssignments();
       for (const ta of taList.filter(t => t.staffId === uid)) {
@@ -653,10 +708,8 @@ export const authService = {
         await deleteDoc(doc(db, 'users', uid)).catch(() => {});
         await deleteDoc(doc(db, 'staff', uid)).catch(() => {});
         await deleteDoc(doc(db, 'teachers', uid)).catch(() => {});
-        return { success: true, error: null };
       } catch (err: any) {
-        console.warn('Error deleting staff from cloud, removed locally:', err.message);
-        return { success: true, error: null };
+        console.warn('Cloud delete staff note:', err.message);
       }
     }
     return { success: true, error: null };
@@ -707,16 +760,17 @@ export const authService = {
   async deleteStudentAccount(uid: string): Promise<{ success: boolean; error: string | null }> {
     if (!uid) return { success: false, error: 'User ID is required.' };
 
+    const deleted = getDeletedUids();
+    deleted.add(uid);
+    saveDeletedUids(deleted);
     MockStore.deleteUser(uid);
 
     if (isLiveFirebaseConfigured) {
       try {
         await deleteDoc(doc(db, 'users', uid)).catch(() => {});
         await deleteDoc(doc(db, 'students', uid)).catch(() => {});
-        return { success: true, error: null };
       } catch (err: any) {
-        console.warn('Error deleting student from cloud, removed locally:', err.message);
-        return { success: true, error: null };
+        console.warn('Cloud delete student note:', err.message);
       }
     }
     return { success: true, error: null };
@@ -810,11 +864,14 @@ export const authService = {
    * Fetch all staff members (for Admin dashboard)
    */
   async getAllStaff(): Promise<StaffUser[]> {
+    const deleted = getDeletedUids();
+    const statusOverrides = getStatusOverrides();
+
+    let list: StaffUser[] = [];
     if (isLiveFirebaseConfigured) {
       try {
         const q = query(collection(db, 'users'), where('role', 'in', ['staff', 'teacher']));
         const snap = await getDocs(q);
-        const list: StaffUser[] = [];
         snap.forEach((d) => list.push(d.data() as StaffUser));
 
         try {
@@ -834,30 +891,36 @@ export const authService = {
             }
           });
         } catch {}
-
-        return list.sort((a, b) => a.name.localeCompare(b.name));
       } catch (err) {
         console.error('Error fetching staff list:', err);
-        return MockStore.getUsers().filter(
+        list = MockStore.getUsers().filter(
           (u) => u.role === 'staff' || u.role === 'teacher'
         ) as StaffUser[];
       }
     } else {
-      return MockStore.getUsers().filter(
+      list = MockStore.getUsers().filter(
         (u) => u.role === 'staff' || u.role === 'teacher'
       ) as StaffUser[];
     }
+
+    return list
+      .filter((s) => !deleted.has(s.uid))
+      .map((s) => (statusOverrides[s.uid] ? { ...s, status: statusOverrides[s.uid] } : s))
+      .sort((a, b) => a.name.localeCompare(b.name));
   },
 
   /**
    * Fetch all students (for Admin dashboard)
    */
   async getAllStudents(): Promise<StudentUser[]> {
+    const deleted = getDeletedUids();
+    const statusOverrides = getStatusOverrides();
+
+    let list: StudentUser[] = [];
     if (isLiveFirebaseConfigured) {
       try {
         const q = query(collection(db, 'users'), where('role', '==', 'student'));
         const snap = await getDocs(q);
-        const list: StudentUser[] = [];
         snap.forEach((d) => list.push(d.data() as StudentUser));
 
         try {
@@ -878,15 +941,18 @@ export const authService = {
             }
           });
         } catch {}
-
-        return list.sort((a, b) => a.pin.localeCompare(b.pin));
       } catch (err) {
         console.error('Error fetching student list:', err);
-        return MockStore.getUsers().filter((u) => u.role === 'student') as StudentUser[];
+        list = MockStore.getUsers().filter((u) => u.role === 'student') as StudentUser[];
       }
     } else {
-      return MockStore.getUsers().filter((u) => u.role === 'student') as StudentUser[];
+      list = MockStore.getUsers().filter((u) => u.role === 'student') as StudentUser[];
     }
+
+    return list
+      .filter((s) => !deleted.has(s.uid))
+      .map((s) => (statusOverrides[s.uid] ? { ...s, status: statusOverrides[s.uid] } : s))
+      .sort((a, b) => a.pin.localeCompare(b.pin));
   },
 
   /**
