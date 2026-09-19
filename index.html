@@ -4,16 +4,6 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     
-    <!-- Clear any stale Service Workers from previous port 5173 projects -->
-    <script>
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.getRegistrations().then(function(regs) {
-          for (var i = 0; i < regs.length; i++) {
-            regs[i].unregister();
-          }
-        }).catch(function() {});
-      }
-    </script>
 
     <!-- Primary SEO & App Identity -->
     <title>SAM — Smart Assignment Manager | CSE Department</title>

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from './context/AuthContext';
 import { AppLayout } from './components/layout/AppLayout';
 import { LoadingSpinner } from './components/common/LoadingSpinner';
+import { PWAInstallBanner } from './components/common/PWAInstallBanner';
 
 // Public pages
 import { LandingPage } from './pages/public/LandingPage';
@@ -77,8 +78,9 @@ export function App() {
     );
   }
 
-  // 1. Unauthenticated Public Flow
-  if (!user || !role) {
+  const renderContent = () => {
+    // 1. Unauthenticated Public Flow
+    if (!user || !role) {
     switch (publicScreen) {
       case 'teacher-login':
         return (
@@ -263,7 +265,15 @@ export function App() {
     );
   }
 
-  return null;
+    return null;
+  };
+
+  return (
+    <>
+      {renderContent()}
+      <PWAInstallBanner />
+    </>
+  );
 }
 
 export default App;

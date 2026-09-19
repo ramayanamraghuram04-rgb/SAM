@@ -1,16 +1,23 @@
 // SAM PWA Service Worker - Safe UI shell caching
-const CACHE_NAME = 'sam-v1.0.0';
+const CACHE_NAME = 'sam-v1.0.2';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
   '/manifest.webmanifest',
-  '/favicon.svg'
+  '/manifest.json',
+  '/favicon.svg',
+  '/pwa-192x192.png',
+  '/pwa-512x512.png',
+  '/maskable-icon-512x512.png',
+  '/apple-touch-icon.png'
 ];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(STATIC_ASSETS);
+    caches.open(CACHE_NAME).then(async (cache) => {
+      await Promise.allSettled(
+        STATIC_ASSETS.map((asset) => cache.add(asset).catch(() => {}))
+      );
     })
   );
   self.skipWaiting();
@@ -33,7 +40,6 @@ self.addEventListener('activate', (event) => {
 
 // Network-first strategy for safety with Firestore / Auth
 self.addEventListener('fetch', (event) => {
-  // Only handle GET requests and skip Firebase / external APIs
   if (event.request.method !== 'GET') return;
   const url = new URL(event.request.url);
   
@@ -48,7 +54,6 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(
     fetch(event.request)
       .then((response) => {
-        // Clone and put into cache if valid response
         if (response && response.status === 200 && response.type === 'basic') {
           const responseToCache = response.clone();
           caches.open(CACHE_NAME).then((cache) => {
