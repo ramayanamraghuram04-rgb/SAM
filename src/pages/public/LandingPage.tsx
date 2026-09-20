@@ -6,11 +6,7 @@ import {
   FileText, 
   UploadCloud, 
   CheckCircle2,
-  Sparkles,
-  Layers,
-  FileCheck2,
-  Send,
-  Star
+  Sparkles
 } from 'lucide-react';
 import { Button } from '../../components/common/Button';
 import { AdminSticker } from '../../components/illustrations/AdminSticker';
@@ -372,45 +368,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGoToLogin }) => {
                 </div>
               </div>
             </div>
-          </div>
-        </section>
-
-        {/* 7. SIMPLE INFORMATION STRIP (No Fake Numerical Statistics) */}
-        <section className="bg-white rounded-2xl border border-[#E2E8F0] p-6 max-w-5xl mx-auto shadow-xs">
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 text-center divide-y sm:divide-y-0 sm:divide-x divide-[#E2E8F0]">
-            
-            <div className="pt-2 sm:pt-0 sm:px-3 space-y-1">
-              <div className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-slate-100 text-[#0F172A] mb-1">
-                <Layers className="w-4 h-4" />
-              </div>
-              <p className="text-xs font-bold text-[#0F172A] tracking-wide uppercase">Manage</p>
-              <p className="text-xs text-[#64748B]">Students & Staff</p>
-            </div>
-
-            <div className="pt-4 sm:pt-0 sm:px-3 space-y-1">
-              <div className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 text-[#2563EB] mb-1">
-                <FileCheck2 className="w-4 h-4" />
-              </div>
-              <p className="text-xs font-bold text-[#0F172A] tracking-wide uppercase">Create</p>
-              <p className="text-xs text-[#64748B]">Assignments</p>
-            </div>
-
-            <div className="pt-4 sm:pt-0 sm:px-3 space-y-1">
-              <div className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-indigo-50 text-[#4F46E5] mb-1">
-                <Send className="w-4 h-4" />
-              </div>
-              <p className="text-xs font-bold text-[#0F172A] tracking-wide uppercase">Submit</p>
-              <p className="text-xs text-[#64748B]">Student Work</p>
-            </div>
-
-            <div className="pt-4 sm:pt-0 sm:px-3 space-y-1">
-              <div className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-emerald-50 text-[#10B981] mb-1">
-                <Star className="w-4 h-4" />
-              </div>
-              <p className="text-xs font-bold text-[#0F172A] tracking-wide uppercase">Evaluate</p>
-              <p className="text-xs text-[#64748B]">Marks & Feedback</p>
-            </div>
-
           </div>
         </section>
 
