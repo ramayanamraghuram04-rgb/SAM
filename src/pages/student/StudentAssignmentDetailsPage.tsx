@@ -8,7 +8,9 @@ import {
   CheckCircle2, 
   AlertCircle,
   Clock,
-  RotateCcw
+  RotateCcw,
+  Camera,
+  Image as ImageIcon
 } from 'lucide-react';
 import { Assignment, Submission } from '../../types';
 import { submissionService } from '../../services/submissionService';
@@ -121,20 +123,53 @@ export const StudentAssignmentDetailsPage: React.FC<StudentAssignmentDetailsPage
 
         {submission ? (
           <div className="space-y-3 pt-2">
-            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 space-y-2 text-xs">
+            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 space-y-3 text-xs">
               <div className="flex items-center justify-between">
-                <span className="font-semibold text-slate-500">Submitted URL:</span>
+                <span className="font-semibold text-slate-700 flex items-center gap-1.5">
+                  <Camera className="w-3.5 h-3.5 text-blue-600" />
+                  {submission.imageUrls && submission.imageUrls.length > 0 
+                    ? `Captured Pages (${submission.imageUrls.length})` 
+                    : 'Submitted Assignment'}
+                </span>
                 <span className="text-slate-400">{formatDateTime(submission.submittedAt)}</span>
               </div>
-              <a
-                href={submission.driveLink}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-600 hover:underline font-mono font-medium truncate block flex items-center gap-1.5"
-              >
-                <ExternalLink className="w-3.5 h-3.5 shrink-0" />
-                <span className="truncate">{submission.driveLink}</span>
-              </a>
+
+              {/* If Cloudinary camera pages are present, show thumbnails */}
+              {submission.imageUrls && submission.imageUrls.length > 0 ? (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 overflow-x-auto py-1">
+                    {submission.imageUrls.map((url, idx) => (
+                      <a
+                        key={url}
+                        href={url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="relative w-16 h-20 rounded-lg overflow-hidden shrink-0 border border-slate-300 hover:border-blue-500 hover:shadow-md transition-all group"
+                        title={`Open Page ${idx + 1}`}
+                      >
+                        <img src={url} alt={`Page ${idx + 1}`} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                        <span className="absolute bottom-0 inset-x-0 bg-black/60 text-white text-[9px] font-bold text-center py-0.5">
+                          P{idx + 1}
+                        </span>
+                      </a>
+                    ))}
+                  </div>
+                  <p className="text-[11px] text-slate-400">
+                    Click any page to view original high-resolution photo in a new tab.
+                  </p>
+                </div>
+              ) : submission.driveLink ? (
+                /* Legacy Drive Link fallback */
+                <a
+                  href={submission.driveLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-600 hover:underline font-mono font-medium truncate block flex items-center gap-1.5"
+                >
+                  <ExternalLink className="w-3.5 h-3.5 shrink-0" />
+                  <span className="truncate">{submission.driveLink}</span>
+                </a>
+              ) : null}
 
               {submission.comment && (
                 <div className="pt-2 border-t border-slate-200/60 text-slate-600">
@@ -174,29 +209,30 @@ export const StudentAssignmentDetailsPage: React.FC<StudentAssignmentDetailsPage
               </div>
             )}
 
-            {/* Resubmit / Edit link button */}
+            {/* Resubmit button */}
             <div className="pt-2">
               <Button
                 variant="outline"
                 size="sm"
+                leftIcon={<Camera className="w-4 h-4 text-blue-600" />}
                 onClick={() => setIsSubmitModalOpen(true)}
               >
-                {submission.status === 'returned' ? 'Resubmit Assignment' : 'Update Google Drive Link'}
+                {submission.status === 'returned' ? 'Retake & Resubmit Pages' : 'Recapture Assignment Pages'}
               </Button>
             </div>
           </div>
         ) : (
           <div className="text-center py-6 space-y-3">
             <p className="text-xs text-slate-500 max-w-md mx-auto">
-              You haven't submitted this notebook assignment yet. Complete your answers in your notebook, take clear photos, upload them to Google Drive, and submit the sharing link.
+              You haven't submitted this notebook assignment yet. Use your device camera to capture clear photos of your handwritten notebook pages directly.
             </p>
             <Button
               variant="primary"
               size="md"
-              leftIcon={<Send className="w-4 h-4" />}
+              leftIcon={<Camera className="w-4 h-4" />}
               onClick={() => setIsSubmitModalOpen(true)}
             >
-              Submit Google Drive Link
+              Capture & Submit Assignment
             </Button>
           </div>
         )}

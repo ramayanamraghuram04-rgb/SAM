@@ -9,29 +9,43 @@ import {
   updateDoc 
 } from 'firebase/firestore';
 import { db, isLiveFirebaseConfigured } from '../config/firebase';
-import { Submission, Assignment, StudentUser } from '../types';
+import { Submission, Assignment, StudentUser, SubmissionImageMetadata } from '../types';
 import { validateDriveUrl } from '../utils/driveValidator';
 import { MockStore } from './mockStorage';
 import { notificationService } from './notificationService';
 
 export const submissionService = {
   /**
-   * Submit or resubmit an assignment with a Google Drive sharing link
+   * Submit or resubmit an assignment with camera-captured Cloudinary image URLs or Google Drive sharing link
    */
   async submitAssignment(params: {
     assignment: Assignment;
     student: StudentUser;
-    driveLink: string;
+    driveLink?: string;
+    imageUrls?: string[];
+    imagesMetadata?: SubmissionImageMetadata[];
     comment?: string;
   }): Promise<{ submission: Submission | null; error: string | null }> {
-    const { assignment, student, driveLink, comment } = params;
+    const { assignment, student, driveLink, imageUrls, imagesMetadata, comment } = params;
 
-    const validation = validateDriveUrl(driveLink);
-    if (!validation.isValid || !validation.normalizedUrl) {
-      return { submission: null, error: validation.errorMessage || 'Please enter a valid Google Drive link.' };
+    const isCamera = Boolean(imageUrls && imageUrls.length > 0);
+    let cleanLink = driveLink || '';
+
+    if (isCamera) {
+      // Camera submission: primary link can point to first page for backward compatibility
+      cleanLink = imageUrls![0];
+    } else {
+      // Legacy Drive submission
+      if (!cleanLink) {
+        return { submission: null, error: 'Please capture at least one assignment page or provide a valid link.' };
+      }
+      const validation = validateDriveUrl(cleanLink);
+      if (!validation.isValid || !validation.normalizedUrl) {
+        return { submission: null, error: validation.errorMessage || 'Please enter a valid Google Drive link.' };
+      }
+      cleanLink = validation.normalizedUrl;
     }
 
-    const cleanLink = validation.normalizedUrl;
     const nowIso = new Date().toISOString();
 
     if (isLiveFirebaseConfigured) {
@@ -54,9 +68,10 @@ export const submissionService = {
           const existingData = existingDoc.data() as Submission;
 
           const history = existingData.history || [];
-          if (existingData.driveLink) {
+          if (existingData.driveLink || existingData.imageUrls) {
             history.push({
               driveLink: existingData.driveLink,
+              imageUrls: existingData.imageUrls,
               submittedAt: existingData.submittedAt,
               comment: existingData.comment,
             });
@@ -65,7 +80,10 @@ export const submissionService = {
           submissionData = {
             ...existingData,
             driveLink: cleanLink,
-            comment: comment || existingData.comment || '',
+            imageUrls: imageUrls || existingData.imageUrls || (cleanLink ? [cleanLink] : []),
+            imagesMetadata: imagesMetadata || existingData.imagesMetadata || [],
+            submissionType: isCamera ? 'camera' : (existingData.submissionType || 'drive'),
+            comment: comment !== undefined ? comment : (existingData.comment || ''),
             status: 'submitted',
             submittedAt: nowIso,
             history,
@@ -73,7 +91,10 @@ export const submissionService = {
 
           await updateDoc(doc(db, 'submissions', submissionId), {
             driveLink: cleanLink,
-            comment: comment || existingData.comment || '',
+            imageUrls: imageUrls || existingData.imageUrls || (cleanLink ? [cleanLink] : []),
+            imagesMetadata: imagesMetadata || existingData.imagesMetadata || [],
+            submissionType: isCamera ? 'camera' : (existingData.submissionType || 'drive'),
+            comment: comment !== undefined ? comment : (existingData.comment || ''),
             status: 'submitted',
             submittedAt: nowIso,
             history,
@@ -91,6 +112,9 @@ export const submissionService = {
             studentName: student.name,
             studentPIN: student.pin,
             driveLink: cleanLink,
+            imageUrls: imageUrls || (cleanLink ? [cleanLink] : []),
+            imagesMetadata: imagesMetadata || [],
+            submissionType: isCamera ? 'camera' : 'drive',
             comment: comment || '',
             status: 'submitted',
             marks: null,
@@ -128,9 +152,10 @@ export const submissionService = {
       let submissionData: Submission;
       if (existing) {
         const history = existing.history || [];
-        if (existing.driveLink) {
+        if (existing.driveLink || existing.imageUrls) {
           history.push({
             driveLink: existing.driveLink,
+            imageUrls: existing.imageUrls,
             submittedAt: existing.submittedAt,
             comment: existing.comment,
           });
@@ -138,7 +163,10 @@ export const submissionService = {
         submissionData = {
           ...existing,
           driveLink: cleanLink,
-          comment: comment || existing.comment || '',
+          imageUrls: imageUrls || existing.imageUrls || (cleanLink ? [cleanLink] : []),
+          imagesMetadata: imagesMetadata || existing.imagesMetadata || [],
+          submissionType: isCamera ? 'camera' : (existing.submissionType || 'drive'),
+          comment: comment !== undefined ? comment : (existing.comment || ''),
           status: 'submitted',
           submittedAt: nowIso,
           history,
@@ -155,6 +183,9 @@ export const submissionService = {
           studentName: student.name,
           studentPIN: student.pin,
           driveLink: cleanLink,
+          imageUrls: imageUrls || (cleanLink ? [cleanLink] : []),
+          imagesMetadata: imagesMetadata || [],
+          submissionType: isCamera ? 'camera' : 'drive',
           comment: comment || '',
           status: 'submitted',
           marks: null,

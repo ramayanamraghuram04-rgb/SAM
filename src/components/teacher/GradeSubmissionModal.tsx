@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ExternalLink, CheckCircle2, RotateCcw, Award } from 'lucide-react';
+import { ExternalLink, CheckCircle2, RotateCcw, Award, ChevronLeft, ChevronRight, Maximize2, Image as ImageIcon } from 'lucide-react';
 import { Modal } from '../common/Modal';
 import { Input } from '../common/Input';
 import { Button } from '../common/Button';
@@ -26,13 +26,21 @@ export const GradeSubmissionModal: React.FC<GradeSubmissionModalProps> = ({
   const { user } = useAuth();
   const [marks, setMarks] = useState<number | ''>(submission.marks ?? '');
   const [feedback, setFeedback] = useState<string>(submission.teacherFeedback || '');
+  const [activePageIndex, setActivePageIndex] = useState<number>(0);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
+
+  const hasImages = Boolean(submission.imageUrls && submission.imageUrls.length > 0);
+  const isDriveLink = Boolean(submission.driveLink && submission.driveLink.includes('drive.google.com'));
 
   const handleOpenDrive = () => {
     if (submission.driveLink) {
       window.open(submission.driveLink, '_blank', 'noopener,noreferrer');
     }
+  };
+
+  const handleOpenImageFullscreen = (url: string) => {
+    window.open(url, '_blank', 'noopener,noreferrer');
   };
 
   const handleSaveMarks = async (status: 'checked' | 'returned') => {
@@ -113,22 +121,112 @@ export const GradeSubmissionModal: React.FC<GradeSubmissionModalProps> = ({
             </div>
           )}
 
-          {/* OPEN GOOGLE DRIVE BUTTON */}
-          <div className="pt-1">
-            <Button
-              type="button"
-              variant="secondary"
-              size="md"
-              fullWidth
-              leftIcon={<ExternalLink className="w-4 h-4 text-blue-600" />}
-              onClick={handleOpenDrive}
-            >
-              OPEN GOOGLE DRIVE
-            </Button>
-            <p className="text-[11px] text-slate-400 text-center mt-1">
-              Opens the student's notebook assignment photos in Google Drive
-            </p>
-          </div>
+          {/* SUBMISSION VIEWER: Cloudinary Captured Images or Legacy Drive */}
+          {hasImages ? (
+            <div className="space-y-2.5 pt-1">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                    <ImageIcon className="w-3.5 h-3.5 text-blue-600" />
+                    Page {activePageIndex + 1} of {submission.imageUrls!.length}
+                  </span>
+                  <span className="text-[10px] font-bold bg-blue-100 text-blue-800 px-2 py-0.5 rounded">
+                    Camera Capture
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-1.5">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={activePageIndex <= 0}
+                    onClick={() => setActivePageIndex((p) => Math.max(0, p - 1))}
+                    leftIcon={<ChevronLeft className="w-3 h-3" />}
+                  >
+                    Prev
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={activePageIndex >= submission.imageUrls!.length - 1}
+                    onClick={() => setActivePageIndex((p) => Math.min(submission.imageUrls!.length - 1, p + 1))}
+                    rightIcon={<ChevronRight className="w-3 h-3" />}
+                  >
+                    Next
+                  </Button>
+                  <button
+                    type="button"
+                    onClick={() => handleOpenImageFullscreen(submission.imageUrls![activePageIndex])}
+                    className="p-1 text-slate-500 hover:text-blue-600 hover:bg-slate-100 rounded transition-colors"
+                    title="Open full size in new tab"
+                  >
+                    <Maximize2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Active Page Image Box */}
+              <div 
+                onClick={() => handleOpenImageFullscreen(submission.imageUrls![activePageIndex])}
+                className="relative rounded-xl overflow-hidden bg-slate-900 border border-slate-200 aspect-3/4 sm:aspect-4/3 max-h-[50vh] flex items-center justify-center cursor-zoom-in group shadow-inner"
+              >
+                <img
+                  src={submission.imageUrls![activePageIndex]}
+                  alt={`Notebook page ${activePageIndex + 1}`}
+                  className="w-full h-full object-contain group-hover:scale-101 transition-transform"
+                />
+                <span className="absolute bottom-2 right-2 bg-black/60 text-white text-[10px] font-semibold px-2 py-0.5 rounded backdrop-blur-xs pointer-events-none">
+                  Click to Zoom / Open Original
+                </span>
+              </div>
+
+              {/* Thumbnails row (if > 1 page) */}
+              {submission.imageUrls!.length > 1 && (
+                <div className="flex items-center gap-2 overflow-x-auto py-1">
+                  {submission.imageUrls!.map((url, idx) => (
+                    <button
+                      key={url}
+                      type="button"
+                      onClick={() => setActivePageIndex(idx)}
+                      className={`relative w-12 h-14 rounded-lg overflow-hidden shrink-0 border-2 transition-all ${
+                        idx === activePageIndex
+                          ? 'border-blue-600 ring-2 ring-blue-500/20 scale-105'
+                          : 'border-slate-200 opacity-60 hover:opacity-100'
+                      }`}
+                    >
+                      <img src={url} alt={`Thumbnail ${idx + 1}`} className="w-full h-full object-cover" />
+                      <span className="absolute bottom-0 inset-x-0 bg-black/60 text-white text-[9px] font-bold text-center">
+                        P{idx + 1}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : isDriveLink ? (
+            /* LEGACY GOOGLE DRIVE BUTTON FOR OLD SUBMISSIONS */
+            <div className="pt-1">
+              <Button
+                type="button"
+                variant="secondary"
+                size="md"
+                fullWidth
+                leftIcon={<ExternalLink className="w-4 h-4 text-blue-600" />}
+                onClick={handleOpenDrive}
+              >
+                OPEN GOOGLE DRIVE
+              </Button>
+              <p className="text-[11px] text-slate-400 text-center mt-1">
+                Legacy submission: Opens student's assignment photos in Google Drive
+              </p>
+            </div>
+          ) : (
+            <div className="p-3 text-xs text-slate-500 text-center">
+              No attached images found for this submission.
+            </div>
+          )}
         </div>
 
         {/* Marks Input */}

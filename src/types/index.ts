@@ -122,8 +122,18 @@ export interface Assignment {
 
 export type SubmissionStatus = 'not_submitted' | 'submitted' | 'under_review' | 'checked' | 'returned';
 
+export interface SubmissionImageMetadata {
+  secure_url: string;
+  public_id: string;
+  width?: number;
+  height?: number;
+  bytes?: number;
+  format?: string;
+}
+
 export interface SubmissionHistoryItem {
-  driveLink: string;
+  driveLink?: string;
+  imageUrls?: string[];
   submittedAt: string;
   comment?: string;
 }
@@ -137,7 +147,10 @@ export interface Submission {
   studentId: string;
   studentName: string;
   studentPIN: string;
-  driveLink: string; // Google Drive sharing URL
+  driveLink?: string; // Google Drive sharing URL (maintained for backward compatibility)
+  imageUrls?: string[]; // Array of Cloudinary secure_urls for camera captures
+  imagesMetadata?: SubmissionImageMetadata[]; // Cloudinary image metadata
+  submissionType?: 'camera' | 'drive';
   comment?: string;
   status: SubmissionStatus;
   marks: number | null; // 0 to maxMarks (10)
