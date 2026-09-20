@@ -179,3 +179,15 @@ export interface PerformanceStats {
   totalMaxMarks: number;
   percentage: number;
 }
+
+export interface CloudinaryUploadResult {
+  secure_url: string;
+  public_id: string;
+  resource_type: string;
+  width: number;
+  height: number;
+  bytes: number;
+  format: string;
+  created_at?: string;
+  original_filename?: string;
+}
