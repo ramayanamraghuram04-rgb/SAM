@@ -39,9 +39,10 @@ export const SUGGESTED_SUBJECTS: Record<Semester, string[]> = {
     'Computer Networks & Cyber Security',
   ],
   '5th': [
-    'Web Technology',
-    'Software Engineering',
-    'Mobile Application Development',
-    'Project Work',
+    'Industrial Management and Entrepreneurship',
+    'Big Data & Cloud Computing',
+    'Android Programming',
+    'Internet Of Things',
+    'Python programming',
   ],
 };
