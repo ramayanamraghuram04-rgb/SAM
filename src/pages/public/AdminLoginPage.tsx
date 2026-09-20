@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
-import { Shield, ArrowLeft, Lock, Smartphone, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Lock, Smartphone, AlertCircle } from 'lucide-react';
 import { Button } from '../../components/common/Button';
 import { Input } from '../../components/common/Input';
 import { Card } from '../../components/common/Card';
 import { authService } from '../../services/authService';
 import { useAuth } from '../../context/AuthContext';
+import { useBranding } from '../../context/BrandingContext';
+import { SamLogo } from '../../components/brand/SamLogo';
 import { isValidIndianMobile } from '../../utils/phoneValidator';
 
 interface AdminLoginPageProps {
@@ -21,6 +23,7 @@ export const AdminLoginPage: React.FC<AdminLoginPageProps> = ({
   onBackToHome,
 }) => {
   const { setUserManually } = useAuth();
+  const { selectedLogo } = useBranding();
   const [mobile, setMobile] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -72,8 +75,8 @@ export const AdminLoginPage: React.FC<AdminLoginPageProps> = ({
         {/* Card */}
         <Card className="p-6 sm:p-8 shadow-xl border-slate-200">
           <div className="text-center space-y-2 mb-6">
-            <div className="w-12 h-12 rounded-2xl bg-slate-900 text-white flex items-center justify-center mx-auto shadow-md">
-              <Shield className="w-6 h-6" />
+            <div className="flex justify-center mb-2">
+              <SamLogo option={selectedLogo} size="lg" className="shadow-md shadow-blue-500/20" />
             </div>
             <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">Admin Sign In</h1>
             <p className="text-xs text-slate-500">

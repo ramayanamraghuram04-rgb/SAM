@@ -4,6 +4,7 @@ import './index.css';
 import App from './App';
 import { AuthProvider } from './context/AuthContext';
 import { NotificationProvider } from './context/NotificationContext';
+import { BrandingProvider } from './context/BrandingContext';
 
 // Register PWA Service Worker reliably
 if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
@@ -26,10 +27,12 @@ if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <AuthProvider>
-      <NotificationProvider>
-        <App />
-      </NotificationProvider>
-    </AuthProvider>
+    <BrandingProvider>
+      <AuthProvider>
+        <NotificationProvider>
+          <App />
+        </NotificationProvider>
+      </AuthProvider>
+    </BrandingProvider>
   </StrictMode>
 );

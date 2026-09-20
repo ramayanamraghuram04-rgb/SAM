@@ -2,7 +2,7 @@
   "id": "/",
   "name": "SAM — Smart Assignment Manager",
   "short_name": "SAM",
-  "description": "Smart Assignment Manager for CSE Students and Teachers",
+  "description": "Smart Assignment Manager for Students and Teachers",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

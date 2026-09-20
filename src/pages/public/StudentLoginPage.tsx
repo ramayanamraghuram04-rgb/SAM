@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
-import { CreditCard, Lock, BookOpen, ArrowLeft, AlertCircle } from 'lucide-react';
+import { CreditCard, Lock, ArrowLeft, AlertCircle } from 'lucide-react';
 import { Button } from '../../components/common/Button';
 import { Input } from '../../components/common/Input';
 import { Card } from '../../components/common/Card';
 import { authService } from '../../services/authService';
 import { useAuth } from '../../context/AuthContext';
+import { useBranding } from '../../context/BrandingContext';
+import { SamLogo } from '../../components/brand/SamLogo';
 import { normalizePIN, isValidStudentPIN } from '../../utils/pinValidator';
 
 interface StudentLoginPageProps {
@@ -21,6 +23,7 @@ export const StudentLoginPage: React.FC<StudentLoginPageProps> = ({
   onBackToHome,
 }) => {
   const { setUserManually } = useAuth();
+  const { selectedLogo } = useBranding();
   const [pin, setPin] = useState<string>('');
   const [password, setPassword] = useState<string>('');
   const [error, setError] = useState<string>('');
@@ -70,8 +73,8 @@ export const StudentLoginPage: React.FC<StudentLoginPageProps> = ({
 
         <Card className="p-6 sm:p-8 space-y-6">
           <div className="text-center space-y-2">
-            <div className="w-12 h-12 rounded-2xl bg-indigo-600 text-white flex items-center justify-center mx-auto shadow-md shadow-indigo-500/25">
-              <BookOpen className="w-6 h-6" />
+            <div className="flex justify-center mb-2">
+              <SamLogo option={selectedLogo} size="lg" className="shadow-md shadow-blue-500/20" />
             </div>
             <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
               Student Sign In

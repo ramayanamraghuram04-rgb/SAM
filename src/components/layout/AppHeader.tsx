@@ -1,7 +1,9 @@
 import React from 'react';
-import { Bell, LogOut, BookOpen, GraduationCap, Shield } from 'lucide-react';
+import { Bell, LogOut, Palette } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useNotifications } from '../../context/NotificationContext';
+import { useBranding } from '../../context/BrandingContext';
+import { SamLogo } from '../brand/SamLogo';
 import { DEPARTMENT } from '../../config/constants';
 
 interface AppHeaderProps {
@@ -15,6 +17,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
 }) => {
   const { user, role, adminUser, staffUser, studentUser, logout } = useAuth();
   const { unreadCount } = useNotifications();
+  const { selectedLogo, openLogoModal } = useBranding();
 
   const getPortalTitle = () => {
     if (role === 'admin') return 'Admin Portal';
@@ -33,15 +36,18 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
       <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
         {/* Left: App Brand & Department */}
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-700 via-blue-600 to-indigo-500 flex items-center justify-center text-white shadow-md shadow-blue-500/25">
-            {role === 'admin' ? (
-              <Shield className="w-6 h-6 text-white" />
-            ) : role === 'staff' || role === 'teacher' ? (
-              <GraduationCap className="w-6 h-6 text-white" />
-            ) : (
-              <BookOpen className="w-6 h-6 text-white" />
-            )}
-          </div>
+          <button
+            type="button"
+            onClick={openLogoModal}
+            className="group cursor-pointer shrink-0 focus:outline-hidden"
+            title="Click to customize SAM Logo"
+          >
+            <SamLogo
+              option={selectedLogo}
+              size="md"
+              className="group-hover:scale-105 shadow-sm shadow-blue-500/20 transition-transform"
+            />
+          </button>
           <div>
             <div className="flex items-center gap-2">
               <span className="text-base font-extrabold tracking-tight text-slate-900">
@@ -59,6 +65,16 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
 
         {/* Right: Actions */}
         <div className="flex items-center gap-2 sm:gap-3">
+          {/* Logo Customizer button */}
+          <button
+            type="button"
+            onClick={openLogoModal}
+            className="p-2 rounded-xl text-slate-500 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+            title="Change SAM Logo"
+            aria-label="Change SAM Logo"
+          >
+            <Palette className="w-4.5 h-4.5" />
+          </button>
           {/* Notifications button (for Staff & Students) */}
           {role !== 'admin' && (
             <button
