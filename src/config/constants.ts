@@ -33,10 +33,11 @@ export const SUGGESTED_SUBJECTS: Record<Semester, string[]> = {
     'COMPUTER ORGANIZATION',
   ],
   '4th': [
-    'Java Programming',
-    'Database Management Systems',
-    'Operating Systems',
-    'Computer Networks',
+    'Software Engineering',
+    'Web Technologies',
+    'Computer Organization And Microprocessors',
+    'OOP through Java',
+    'Computer Networks & Cyber Security',
   ],
   '5th': [
     'Web Technology',
