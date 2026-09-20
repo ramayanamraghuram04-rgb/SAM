@@ -24,10 +24,13 @@ export const SUGGESTED_SUBJECTS: Record<Semester, string[]> = {
     'CODING FUNDAMENTALS',
   ],
   '3rd': [
-    'C Programming',
-    'Data Structures using C',
-    'Digital Electronics',
-    'Computer Organization',
+    'DATA STRUCTURES THROUGH PYTHON',
+    'DATABASE MANAGEMENT SYSTEMS',
+    'OPERATING SYSTEMS',
+    'ELECTIVE SUBJECT',
+    'ENGINEERING MATHEMATICS II',
+    'DIGITAL ELECTRONICS',
+    'COMPUTER ORGANIZATION',
   ],
   '4th': [
     'Java Programming',
