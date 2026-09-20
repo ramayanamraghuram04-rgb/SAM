@@ -1,43 +1,23 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { LogoOption, getLogoSvgString } from '../components/brand/SamLogo';
-
-const LOGO_STORAGE_KEY = 'sam_selected_logo';
-const LOGO_CHOSEN_FLAG_KEY = 'sam_logo_chosen';
+import React, { createContext, useContext, useEffect } from 'react';
+import { getLogoSvgString } from '../components/brand/SamLogo';
 
 interface BrandingContextType {
-  selectedLogo: LogoOption;
-  setLogoOption: (option: LogoOption) => void;
-  isSelectionModalOpen: boolean;
   openLogoModal: () => void;
   closeLogoModal: () => void;
-  hasChosenLogo: boolean;
+  isSelectionModalOpen: boolean;
 }
 
-const BrandingContext = createContext<BrandingContextType | undefined>(undefined);
+const BrandingContext = createContext<BrandingContextType>({
+  openLogoModal: () => {},
+  closeLogoModal: () => {},
+  isSelectionModalOpen: false,
+});
 
 export const BrandingProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [selectedLogo, setSelectedLogoState] = useState<LogoOption>(() => {
-    try {
-      const saved = localStorage.getItem(LOGO_STORAGE_KEY);
-      if (saved === 'option1' || saved === 'option2') return saved;
-    } catch (_) {}
-    return 'option1';
-  });
-
-  const [hasChosenLogo, setHasChosenLogo] = useState<boolean>(() => {
-    try {
-      return localStorage.getItem(LOGO_CHOSEN_FLAG_KEY) === 'true';
-    } catch (_) {
-      return false;
-    }
-  });
-
-  const [isSelectionModalOpen, setIsSelectionModalOpen] = useState(false);
-
-  // Update dynamic favicon when selected logo changes
+  // Ensure the official best modern SAM favicon is active
   useEffect(() => {
     try {
-      const svg = getLogoSvgString(selectedLogo);
+      const svg = getLogoSvgString();
       const encoded = `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
       
       let link: HTMLLinkElement | null = document.querySelector("link[rel~='icon']");
@@ -49,31 +29,16 @@ export const BrandingProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       link.type = 'image/svg+xml';
       link.href = encoded;
     } catch (err) {
-      console.warn('Could not update dynamic favicon:', err);
+      console.warn('Could not set official favicon:', err);
     }
-  }, [selectedLogo]);
-
-  const setLogoOption = (option: LogoOption) => {
-    setSelectedLogoState(option);
-    setHasChosenLogo(true);
-    try {
-      localStorage.setItem(LOGO_STORAGE_KEY, option);
-      localStorage.setItem(LOGO_CHOSEN_FLAG_KEY, 'true');
-    } catch (_) {}
-  };
-
-  const openLogoModal = () => setIsSelectionModalOpen(true);
-  const closeLogoModal = () => setIsSelectionModalOpen(false);
+  }, []);
 
   return (
     <BrandingContext.Provider
       value={{
-        selectedLogo,
-        setLogoOption,
-        isSelectionModalOpen,
-        openLogoModal,
-        closeLogoModal,
-        hasChosenLogo,
+        openLogoModal: () => {},
+        closeLogoModal: () => {},
+        isSelectionModalOpen: false,
       }}
     >
       {children}
@@ -82,9 +47,5 @@ export const BrandingProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 };
 
 export const useBranding = (): BrandingContextType => {
-  const context = useContext(BrandingContext);
-  if (!context) {
-    throw new Error('useBranding must be used within a BrandingProvider');
-  }
-  return context;
+  return useContext(BrandingContext);
 };

@@ -10,24 +10,19 @@ import {
   Layers,
   FileCheck2,
   Send,
-  Star,
-  Palette,
-  Check
+  Star
 } from 'lucide-react';
 import { Button } from '../../components/common/Button';
 import { AdminSticker } from '../../components/illustrations/AdminSticker';
 import { TeacherSticker } from '../../components/illustrations/TeacherSticker';
 import { StudentSticker } from '../../components/illustrations/StudentSticker';
-import { useBranding } from '../../context/BrandingContext';
-import { SamLogo, SamLogoMinimalist, SamLogoEducational } from '../../components/brand/SamLogo';
+import { SamLogo } from '../../components/brand/SamLogo';
 
 interface LandingPageProps {
   onGoToLogin: (role: 'admin' | 'staff' | 'student') => void;
 }
 
 export const LandingPage: React.FC<LandingPageProps> = ({ onGoToLogin }) => {
-  const { selectedLogo, setLogoOption, openLogoModal, hasChosenLogo } = useBranding();
-
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-[#0F172A] flex flex-col justify-between selection:bg-[#2563EB] selection:text-white">
       
@@ -37,18 +32,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGoToLogin }) => {
           
           {/* Left: SAM Logo, Name, Subtitle */}
           <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={openLogoModal}
-              className="group cursor-pointer shrink-0 focus:outline-hidden"
-              title="Click to customize SAM Logo"
-            >
-              <SamLogo
-                option={selectedLogo}
-                size="md"
-                className="group-hover:scale-105 shadow-sm shadow-blue-500/20 transition-transform"
-              />
-            </button>
+            <div className="shrink-0">
+              <SamLogo size="md" className="shadow-sm shadow-blue-500/20" />
+            </div>
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-base font-extrabold tracking-tight text-[#0F172A]">SAM</span>
@@ -59,18 +45,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGoToLogin }) => {
             </div>
           </div>
 
-          {/* Right: Role Navigation Buttons & Logo Customizer */}
+          {/* Right: Role Navigation Buttons */}
           <nav className="flex items-center gap-1.5 sm:gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={openLogoModal}
-              leftIcon={<Palette className="w-3.5 h-3.5 text-[#2563EB]" />}
-              className="text-xs font-semibold px-2.5 sm:px-3 border-blue-200 text-[#2563EB] bg-blue-50/50 hover:bg-blue-100"
-              title="Choose your SAM logo"
-            >
-              Logo
-            </Button>
             <Button
               variant="outline"
               size="sm"
@@ -103,117 +79,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGoToLogin }) => {
       {/* Main Content Area */}
       <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-8 sm:py-14 space-y-12 sm:space-y-16">
         
-        {/* 1. CHOOSE YOUR SAM LOGO SELECTION INTERFACE (Shown until user selects or via header) */}
-        {!hasChosenLogo && (
-          <section className="bg-white rounded-2xl p-6 sm:p-8 border-2 border-blue-100 shadow-lg shadow-blue-500/5 max-w-3xl mx-auto space-y-5 animate-in fade-in slide-in-from-top-4 duration-300">
-            <div className="text-center space-y-1">
-              <span className="text-[11px] font-bold text-[#2563EB] tracking-wider uppercase bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200/60">
-                Custom Branding Experience
-              </span>
-              <h2 className="text-xl sm:text-2xl font-black text-[#0F172A] tracking-tight">
-                Choose your SAM logo
-              </h2>
-              <p className="text-xs sm:text-sm text-[#64748B] max-w-lg mx-auto">
-                Select your preferred identity below. SAM will save your choice and use this logo across your interface and header.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-              {/* Option 1 */}
-              <div
-                onClick={() => setLogoOption('option1')}
-                className={`p-5 rounded-xl border-2 cursor-pointer transition-all flex flex-col justify-between ${
-                  selectedLogo === 'option1'
-                    ? 'border-blue-600 bg-blue-50/40 ring-2 ring-blue-500/20'
-                    : 'border-slate-200 hover:border-slate-300 bg-white'
-                }`}
-              >
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-extrabold tracking-wider text-blue-700 bg-blue-100 px-2 py-0.5 rounded uppercase">
-                      OPTION 1
-                    </span>
-                    {selectedLogo === 'option1' && (
-                      <span className="text-[10px] font-bold text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full flex items-center gap-1">
-                        <Check className="w-3 h-3" /> Active
-                      </span>
-                    )}
-                  </div>
-                  <div className="h-24 flex items-center justify-center bg-slate-50 rounded-lg">
-                    <SamLogoMinimalist size="xl" />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-bold text-slate-900">Professional Minimalist</h3>
-                    <p className="text-xs text-slate-500 mt-1">
-                      Clean geometric monogram with document layers and checkmark accent.
-                    </p>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setLogoOption('option1');
-                  }}
-                  className={`mt-4 w-full py-2 px-3 rounded-lg text-xs font-bold transition-colors flex items-center justify-center gap-1.5 ${
-                    selectedLogo === 'option1'
-                      ? 'bg-blue-600 text-white shadow-xs'
-                      : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
-                  }`}
-                >
-                  {selectedLogo === 'option1' ? 'Selected Option 1' : 'Select Option 1'}
-                </button>
-              </div>
-
-              {/* Option 2 */}
-              <div
-                onClick={() => setLogoOption('option2')}
-                className={`p-5 rounded-xl border-2 cursor-pointer transition-all flex flex-col justify-between ${
-                  selectedLogo === 'option2'
-                    ? 'border-blue-600 bg-blue-50/40 ring-2 ring-blue-500/20'
-                    : 'border-slate-200 hover:border-slate-300 bg-white'
-                }`}
-              >
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-extrabold tracking-wider text-indigo-700 bg-indigo-100 px-2 py-0.5 rounded uppercase">
-                      OPTION 2
-                    </span>
-                    {selectedLogo === 'option2' && (
-                      <span className="text-[10px] font-bold text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full flex items-center gap-1">
-                        <Check className="w-3 h-3" /> Active
-                      </span>
-                    )}
-                  </div>
-                  <div className="h-24 flex items-center justify-center bg-slate-50 rounded-lg">
-                    <SamLogoEducational size="xl" />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-bold text-slate-900">Modern Educational</h3>
-                    <p className="text-xs text-slate-500 mt-1">
-                      Academic crest fusing open book wings, mortarboard crown, and verified check.
-                    </p>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setLogoOption('option2');
-                  }}
-                  className={`mt-4 w-full py-2 px-3 rounded-lg text-xs font-bold transition-colors flex items-center justify-center gap-1.5 ${
-                    selectedLogo === 'option2'
-                      ? 'bg-blue-600 text-white shadow-xs'
-                      : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
-                  }`}
-                >
-                  {selectedLogo === 'option2' ? 'Selected Option 2' : 'Select Option 2'}
-                </button>
-              </div>
-            </div>
-          </section>
-        )}
-
         {/* 3. HERO SECTION - Clean, Balanced, No Huge Empty Spaces, No Excessive Gradients */}
         <section className="text-center space-y-4 max-w-3xl mx-auto pt-2 sm:pt-4">
           
@@ -553,19 +418,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGoToLogin }) => {
 
       {/* 10. FOOTER - Minimal, Professional, No Department Restriction */}
       <footer className="py-6 border-t border-[#E2E8F0] bg-white text-center text-xs text-[#64748B]">
-        <div className="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <p>
-            © 2026 SAM — Smart Assignment Manager • Modern Academic Workflow System
-          </p>
-          <button
-            type="button"
-            onClick={openLogoModal}
-            className="inline-flex items-center gap-1.5 text-blue-600 hover:text-blue-800 font-semibold transition-colors"
-          >
-            <Palette className="w-3.5 h-3.5" />
-            <span>Change Logo Style</span>
-          </button>
-        </div>
+        <p className="max-w-6xl mx-auto px-4">
+          © 2026 SAM — Smart Assignment Manager • Modern Academic Workflow System
+        </p>
       </footer>
 
     </div>

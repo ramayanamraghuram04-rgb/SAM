@@ -1,10 +1,8 @@
 import React from 'react';
 
-export type LogoOption = 'option1' | 'option2';
 export type LogoSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl';
 
 interface SamLogoProps {
-  option?: LogoOption;
   size?: LogoSize;
   className?: string;
   showBadge?: boolean;
@@ -19,12 +17,14 @@ const sizeMap: Record<LogoSize, { px: number; containerClass: string }> = {
 };
 
 /**
- * OPTION 1: Professional Minimalist SAM Logo
- * - Geometric monogram fusing the letter "S" with assignment document layers and a verified checkmark
- * - Represents: Assignments, Organization, Smart Management
- * - High contrast, razor-sharp at all sizes, clean blue & white identity
+ * Official Best Modern SAM Educational Logo
+ * - Harmonious modern academic crest fusing:
+ *   1. Modern mortarboard diamond crown (Education)
+ *   2. Open educational textbook wings (Assignments & Learning)
+ *   3. Verified assignment checkmark evaluation badge (Smart Management)
+ * - Ultra-crisp vector silhouette, high contrast in royal blue (#2563EB) and pure white (#FFFFFF)
  */
-export const SamLogoMinimalist: React.FC<{ size?: LogoSize; className?: string }> = ({
+export const SamLogo: React.FC<SamLogoProps> = ({
   size = 'md',
   className = '',
 }) => {
@@ -38,70 +38,20 @@ export const SamLogoMinimalist: React.FC<{ size?: LogoSize; className?: string }
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       className={`shrink-0 transition-transform duration-200 ${className}`}
-      aria-label="SAM Minimalist Logo"
+      aria-label="SAM - Smart Assignment Manager"
     >
-      {/* Background Rounded Shield / Tile */}
+      {/* Background Rounded Tile in Vibrant Royal Blue */}
       <rect width="100" height="100" rx="22" fill="#2563EB" />
-
-      {/* Layer 1: Clean White Minimalist Geometric "S" & Folded Document Structure */}
-      {/* Top loop of S / Document Header */}
-      <path
-        d="M68 28H38C32.4772 28 28 32.4772 28 38C28 43.5228 32.4772 48 38 48H62C67.5228 48 72 52.4772 72 58C72 63.5228 67.5228 68 62 68H30"
-        stroke="#FFFFFF"
-        strokeWidth="9"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-
-      {/* Smart Management Checkmark Accent */}
-      <path
-        d="M48 58L54 64L68 46"
-        stroke="#93C5FD"
-        strokeWidth="6"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-
-      {/* Minimalist Top Assignment Corner Tab */}
-      <circle cx="70" cy="28" r="4.5" fill="#DBEAFE" />
-    </svg>
-  );
-};
-
-/**
- * OPTION 2: Modern Educational SAM Logo
- * - Academic crest combining open textbook knowledge wings with graduation cap geometry and verified assignment check
- * - Represents: Education, Organization, Verified Submissions
- * - Bold silhouette, distinctive academic identity in royal blue & white
- */
-export const SamLogoEducational: React.FC<{ size?: LogoSize; className?: string }> = ({
-  size = 'md',
-  className = '',
-}) => {
-  const { px } = sizeMap[size];
-
-  return (
-    <svg
-      width={px}
-      height={px}
-      viewBox="0 0 100 100"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      className={`shrink-0 transition-transform duration-200 ${className}`}
-      aria-label="SAM Educational Logo"
-    >
-      {/* Background Rounded Tile */}
-      <rect width="100" height="100" rx="22" fill="#1D4ED8" />
 
       {/* Modern Mortarboard Diamond Crown */}
       <path
-        d="M50 20L78 32L50 44L22 32L50 20Z"
+        d="M50 19L79 32L50 45L21 32L50 19Z"
         fill="#FFFFFF"
       />
 
       {/* Graduation Cap Tassel Accent */}
       <path
-        d="M76 34V48C76 50 74 51 73 51"
+        d="M77 34V49C77 51 75 52 74 52"
         stroke="#93C5FD"
         strokeWidth="3.5"
         strokeLinecap="round"
@@ -109,21 +59,21 @@ export const SamLogoEducational: React.FC<{ size?: LogoSize; className?: string 
 
       {/* Open Educational Book Wings (Assignment Pages) */}
       <path
-        d="M26 49C33 46 43 47 50 51C57 47 67 46 74 49V74C67 70.5 57 71 50 75C43 71 33 70.5 26 74V49Z"
+        d="M25 50C32.5 46.5 42.5 47.5 50 51.5C57.5 47.5 67.5 46.5 75 50V75C67.5 71 57.5 71.5 50 76C42.5 71.5 32.5 71 25 75V50Z"
         fill="#FFFFFF"
-        opacity="0.95"
+        opacity="0.96"
       />
 
       {/* Book Spine Center Divider */}
       <path
-        d="M50 51V75"
-        stroke="#1D4ED8"
-        strokeWidth="3"
+        d="M50 51.5V76"
+        stroke="#2563EB"
+        strokeWidth="3.2"
         strokeLinecap="round"
       />
 
       {/* Smart Assignment Verified Badge in Bottom Right */}
-      <circle cx="74" cy="74" r="14" fill="#2563EB" stroke="#FFFFFF" strokeWidth="3" />
+      <circle cx="74" cy="74" r="14" fill="#1D4ED8" stroke="#FFFFFF" strokeWidth="3" />
       <path
         d="M68 74L72 78L80 70"
         stroke="#FFFFFF"
@@ -135,40 +85,34 @@ export const SamLogoEducational: React.FC<{ size?: LogoSize; className?: string 
   );
 };
 
-/**
- * Master SAM Logo Component
- */
-export const SamLogo: React.FC<SamLogoProps> = ({
-  option = 'option1',
-  size = 'md',
-  className = '',
-}) => {
-  if (option === 'option2') {
-    return <SamLogoEducational size={size} className={className} />;
-  }
-  return <SamLogoMinimalist size={size} className={className} />;
-};
+export const SamLogoEducational = SamLogo;
+export const SamLogoMinimalist = SamLogo;
 
 /**
- * Raw SVG strings for generating favicon and PWA icons
+ * Raw SVG string for generating favicon and PWA icons
  */
-export function getLogoSvgString(option: LogoOption): string {
-  if (option === 'option2') {
-    return `<svg width="512" height="512" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <rect width="100" height="100" rx="22" fill="#1D4ED8" />
-  <path d="M50 20L78 32L50 44L22 32L50 20Z" fill="#FFFFFF" />
-  <path d="M76 34V48C76 50 74 51 73 51" stroke="#93C5FD" stroke-width="3.5" stroke-linecap="round" />
-  <path d="M26 49C33 46 43 47 50 51C57 47 67 46 74 49V74C67 70.5 57 71 50 75C43 71 33 70.5 26 74V49Z" fill="#FFFFFF" opacity="0.95" />
-  <path d="M50 51V75" stroke="#1D4ED8" stroke-width="3" stroke-linecap="round" />
-  <circle cx="74" cy="74" r="14" fill="#2563EB" stroke="#FFFFFF" stroke-width="3" />
-  <path d="M68 74L72 78L80 70" stroke="#FFFFFF" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" />
-</svg>`;
-  }
-
+export function getLogoSvgString(): string {
   return `<svg width="512" height="512" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
   <rect width="100" height="100" rx="22" fill="#2563EB" />
-  <path d="M68 28H38C32.4772 28 28 32.4772 28 38C28 43.5228 32.4772 48 38 48H62C67.5228 48 72 52.4772 72 58C72 63.5228 67.5228 68 62 68H30" stroke="#FFFFFF" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" />
-  <path d="M48 58L54 64L68 46" stroke="#93C5FD" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" />
-  <circle cx="70" cy="28" r="4.5" fill="#DBEAFE" />
+  <path d="M50 19L79 32L50 45L21 32L50 19Z" fill="#FFFFFF" />
+  <path d="M77 34V49C77 51 75 52 74 52" stroke="#93C5FD" stroke-width="3.5" stroke-linecap="round" />
+  <path d="M25 50C32.5 46.5 42.5 47.5 50 51.5C57.5 47.5 67.5 46.5 75 50V75C67.5 71 57.5 71.5 50 76C42.5 71.5 32.5 71 25 75V50Z" fill="#FFFFFF" opacity="0.96" />
+  <path d="M50 51.5V76" stroke="#2563EB" stroke-width="3.2" stroke-linecap="round" />
+  <circle cx="74" cy="74" r="14" fill="#1D4ED8" stroke="#FFFFFF" stroke-width="3" />
+  <path d="M68 74L72 78L80 70" stroke="#FFFFFF" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" />
+</svg>`;
+}
+
+export function getMaskableLogoSvgString(): string {
+  return `<svg width="512" height="512" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="120" height="120" fill="#2563EB" />
+  <g transform="translate(10, 10)">
+    <path d="M50 19L79 32L50 45L21 32L50 19Z" fill="#FFFFFF" />
+    <path d="M77 34V49C77 51 75 52 74 52" stroke="#93C5FD" stroke-width="3.5" stroke-linecap="round" />
+    <path d="M25 50C32.5 46.5 42.5 47.5 50 51.5C57.5 47.5 67.5 46.5 75 50V75C67.5 71 57.5 71.5 50 76C42.5 71.5 32.5 71 25 75V50Z" fill="#FFFFFF" opacity="0.96" />
+    <path d="M50 51.5V76" stroke="#2563EB" stroke-width="3.2" stroke-linecap="round" />
+    <circle cx="74" cy="74" r="14" fill="#1D4ED8" stroke="#FFFFFF" stroke-width="3" />
+    <path d="M68 74L72 78L80 70" stroke="#FFFFFF" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" />
+  </g>
 </svg>`;
 }

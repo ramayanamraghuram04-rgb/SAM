@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { Download, X, Share } from 'lucide-react';
-import { useBranding } from '../../context/BrandingContext';
 import { SamLogo } from '../brand/SamLogo';
 
 interface BeforeInstallPromptEvent extends Event {
@@ -13,7 +12,6 @@ interface BeforeInstallPromptEvent extends Event {
 }
 
 export const PWAInstallBanner: React.FC = () => {
-  const { selectedLogo } = useBranding();
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isIOS, setIsIOS] = useState(false);
   const [isDismissed, setIsDismissed] = useState(false);
@@ -93,7 +91,7 @@ export const PWAInstallBanner: React.FC = () => {
   return (
     <aside aria-label="Install SAM App" className="fixed bottom-16 sm:bottom-4 left-4 right-4 max-w-md mx-auto z-50 bg-white/95 backdrop-blur-md border border-blue-200 shadow-2xl rounded-2xl p-4 transition-all duration-300 animate-in fade-in slide-in-from-bottom-4">
       <div className="flex items-start gap-3">
-        <SamLogo option={selectedLogo} size="md" className="shrink-0 shadow-md shadow-blue-500/25" />
+        <SamLogo size="md" className="shrink-0 shadow-md shadow-blue-500/25" />
 
         <div className="flex-1 min-w-0">
           <h4 className="text-sm font-bold text-slate-900 leading-tight">

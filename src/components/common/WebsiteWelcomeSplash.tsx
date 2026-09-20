@@ -1,11 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { useBranding } from '../../context/BrandingContext';
 import { SamLogo } from '../brand/SamLogo';
 
 const SESSION_WELCOME_KEY = 'sam_web_welcome_shown';
 
 export const WebsiteWelcomeSplash: React.FC = () => {
-  const { selectedLogo } = useBranding();
   const [visible, setVisible] = useState(false);
   const [fading, setFading] = useState(false);
 
@@ -65,7 +63,7 @@ export const WebsiteWelcomeSplash: React.FC = () => {
     >
       <div className="flex flex-col items-center text-center space-y-4 px-6 animate-in fade-in zoom-in-95 duration-500">
         <div className="p-3 bg-blue-50/60 rounded-3xl ring-8 ring-blue-50/40">
-          <SamLogo option={selectedLogo} size="xl" className="shadow-lg shadow-blue-500/20" />
+          <SamLogo size="xl" className="shadow-lg shadow-blue-500/20" />
         </div>
 
         <div className="space-y-1">

@@ -5,7 +5,6 @@ import { Input } from '../../components/common/Input';
 import { Card } from '../../components/common/Card';
 import { authService } from '../../services/authService';
 import { useAuth } from '../../context/AuthContext';
-import { useBranding } from '../../context/BrandingContext';
 import { SamLogo } from '../../components/brand/SamLogo';
 import { normalizePIN, isValidStudentPIN } from '../../utils/pinValidator';
 
@@ -23,7 +22,6 @@ export const StudentLoginPage: React.FC<StudentLoginPageProps> = ({
   onBackToHome,
 }) => {
   const { setUserManually } = useAuth();
-  const { selectedLogo } = useBranding();
   const [pin, setPin] = useState<string>('');
   const [password, setPassword] = useState<string>('');
   const [error, setError] = useState<string>('');
@@ -74,7 +72,7 @@ export const StudentLoginPage: React.FC<StudentLoginPageProps> = ({
         <Card className="p-6 sm:p-8 space-y-6">
           <div className="text-center space-y-2">
             <div className="flex justify-center mb-2">
-              <SamLogo option={selectedLogo} size="lg" className="shadow-md shadow-blue-500/20" />
+              <SamLogo size="lg" className="shadow-md shadow-blue-500/20" />
             </div>
             <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
               Student Sign In

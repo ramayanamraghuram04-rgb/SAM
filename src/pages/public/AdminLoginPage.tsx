@@ -5,7 +5,6 @@ import { Input } from '../../components/common/Input';
 import { Card } from '../../components/common/Card';
 import { authService } from '../../services/authService';
 import { useAuth } from '../../context/AuthContext';
-import { useBranding } from '../../context/BrandingContext';
 import { SamLogo } from '../../components/brand/SamLogo';
 import { isValidIndianMobile } from '../../utils/phoneValidator';
 
@@ -23,7 +22,6 @@ export const AdminLoginPage: React.FC<AdminLoginPageProps> = ({
   onBackToHome,
 }) => {
   const { setUserManually } = useAuth();
-  const { selectedLogo } = useBranding();
   const [mobile, setMobile] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -76,7 +74,7 @@ export const AdminLoginPage: React.FC<AdminLoginPageProps> = ({
         <Card className="p-6 sm:p-8 shadow-xl border-slate-200">
           <div className="text-center space-y-2 mb-6">
             <div className="flex justify-center mb-2">
-              <SamLogo option={selectedLogo} size="lg" className="shadow-md shadow-blue-500/20" />
+              <SamLogo size="lg" className="shadow-md shadow-blue-500/20" />
             </div>
             <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">Admin Sign In</h1>
             <p className="text-xs text-slate-500">

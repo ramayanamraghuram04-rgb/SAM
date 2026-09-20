@@ -5,7 +5,6 @@ import { LoadingSpinner } from './components/common/LoadingSpinner';
 import { PWAInstallBanner } from './components/common/PWAInstallBanner';
 import { WebsiteWelcomeSplash } from './components/common/WebsiteWelcomeSplash';
 import { FirstLaunchPWAToast } from './components/common/FirstLaunchPWAToast';
-import { LogoSelectionModal } from './components/brand/LogoSelectionModal';
 
 // Public pages
 import { LandingPage } from './pages/public/LandingPage';
@@ -292,7 +291,6 @@ export function App() {
       {renderContent()}
       <PWAInstallBanner />
       <FirstLaunchPWAToast />
-      <LogoSelectionModal />
     </>
   );
 }
