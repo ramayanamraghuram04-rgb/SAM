@@ -45,6 +45,26 @@ export function staffPhoneToEmail(mobile: string): string {
 
 const DELETED_USERS_KEY = 'sam_deleted_users';
 const STATUS_OVERRIDES_KEY = 'sam_user_status_overrides';
+const DATA_CLEAN_KEY = 'sam_data_fresh_clean_v3';
+
+// One-time fresh cleanup of old local storage data across clients
+if (typeof localStorage !== 'undefined') {
+  try {
+    if (localStorage.getItem(DATA_CLEAN_KEY) !== 'true') {
+      localStorage.removeItem(DELETED_USERS_KEY);
+      localStorage.removeItem(STATUS_OVERRIDES_KEY);
+      localStorage.removeItem('sam_users');
+      localStorage.removeItem('sam_classes');
+      localStorage.removeItem('sam_class_members');
+      localStorage.removeItem('sam_invitations');
+      localStorage.removeItem('sam_assignments');
+      localStorage.removeItem('sam_submissions');
+      localStorage.removeItem('sam_notifications');
+      localStorage.removeItem('sam_teaching_assignments');
+      localStorage.setItem(DATA_CLEAN_KEY, 'true');
+    }
+  } catch {}
+}
 
 export function getDeletedUids(): Set<string> {
   try {
@@ -71,6 +91,21 @@ export function getStatusOverrides(): Record<string, UserStatus> {
 export function saveStatusOverrides(overrides: Record<string, UserStatus>): void {
   try {
     localStorage.setItem(STATUS_OVERRIDES_KEY, JSON.stringify(overrides));
+  } catch {}
+}
+
+export function clearAllLocalTestData(): void {
+  try {
+    localStorage.removeItem(DELETED_USERS_KEY);
+    localStorage.removeItem(STATUS_OVERRIDES_KEY);
+    localStorage.removeItem('sam_users');
+    localStorage.removeItem('sam_classes');
+    localStorage.removeItem('sam_class_members');
+    localStorage.removeItem('sam_invitations');
+    localStorage.removeItem('sam_assignments');
+    localStorage.removeItem('sam_submissions');
+    localStorage.removeItem('sam_notifications');
+    localStorage.removeItem('sam_teaching_assignments');
   } catch {}
 }
 
@@ -471,6 +506,18 @@ export const authService = {
           createdAt: new Date().toISOString(),
         };
 
+        // Ensure newly created or restored account is active and not marked deleted
+        const delUids = getDeletedUids();
+        if (delUids.has(uid)) {
+          delUids.delete(uid);
+          saveDeletedUids(delUids);
+        }
+        const statOverrides = getStatusOverrides();
+        if (statOverrides[uid]) {
+          delete statOverrides[uid];
+          saveStatusOverrides(statOverrides);
+        }
+
         // Write using secondaryDb where request.auth.uid == uid!
         await setDoc(doc(secondaryDb, 'users', uid), staffData);
         await setDoc(doc(secondaryDb, 'teachers', uid), staffData);
@@ -609,6 +656,18 @@ export const authService = {
           status: 'active',
           createdAt: new Date().toISOString(),
         };
+
+        // Ensure newly created or restored account is active and not marked deleted
+        const delUids = getDeletedUids();
+        if (delUids.has(uid)) {
+          delUids.delete(uid);
+          saveDeletedUids(delUids);
+        }
+        const statOverrides = getStatusOverrides();
+        if (statOverrides[uid]) {
+          delete statOverrides[uid];
+          saveStatusOverrides(statOverrides);
+        }
 
         // Write using secondaryDb where request.auth.uid == uid!
         await setDoc(doc(secondaryDb, 'users', uid), studentData);
