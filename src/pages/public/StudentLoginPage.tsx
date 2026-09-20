@@ -5,7 +5,6 @@ import { Input } from '../../components/common/Input';
 import { Card } from '../../components/common/Card';
 import { authService } from '../../services/authService';
 import { useAuth } from '../../context/AuthContext';
-import { DEPARTMENT } from '../../config/constants';
 import { normalizePIN, isValidStudentPIN } from '../../utils/pinValidator';
 
 interface StudentLoginPageProps {
@@ -78,7 +77,7 @@ export const StudentLoginPage: React.FC<StudentLoginPageProps> = ({
               Student Sign In
             </h2>
             <p className="text-xs text-slate-500">
-              Department of <span className="font-bold text-indigo-600">{DEPARTMENT}</span> • Login with your College PIN
+              Assignment Management System • Login with your College PIN
             </p>
           </div>
 

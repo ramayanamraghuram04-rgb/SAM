@@ -5,7 +5,6 @@ import { Input } from '../../components/common/Input';
 import { Card } from '../../components/common/Card';
 import { authService } from '../../services/authService';
 import { useAuth } from '../../context/AuthContext';
-import { DEPARTMENT } from '../../config/constants';
 
 interface TeacherLoginPageProps {
   onSuccess: () => void;
@@ -79,7 +78,7 @@ export const TeacherLoginPage: React.FC<TeacherLoginPageProps> = ({
               Staff / Teacher Sign In
             </h2>
             <p className="text-xs text-slate-500">
-              Department of <span className="font-bold text-blue-600">{DEPARTMENT}</span> • Single Staff Account Access
+              Assignment Management System • Staff Account Access
             </p>
           </div>
 

@@ -1,51 +1,58 @@
 import React from 'react';
 import { 
   GraduationCap, 
-  BookOpen, 
   Shield, 
   ArrowRight, 
-  ShieldCheck, 
-  Smartphone, 
-  FolderCheck,
-  Award
+  UserCheck, 
+  FileText, 
+  UploadCloud, 
+  CheckCircle2,
+  Sparkles,
+  Layers,
+  FileCheck2,
+  Send,
+  Star
 } from 'lucide-react';
 import { Button } from '../../components/common/Button';
-import { Card } from '../../components/common/Card';
-import { DEPARTMENT, DEPARTMENT_FULL } from '../../config/constants';
+import { AdminSticker } from '../../components/illustrations/AdminSticker';
+import { TeacherSticker } from '../../components/illustrations/TeacherSticker';
+import { StudentSticker } from '../../components/illustrations/StudentSticker';
 
 interface LandingPageProps {
   onGoToLogin: (role: 'admin' | 'staff' | 'student') => void;
 }
 
-export const LandingPage: React.FC<LandingPageProps> = ({
-  onGoToLogin,
-}) => {
+export const LandingPage: React.FC<LandingPageProps> = ({ onGoToLogin }) => {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-50/60 via-white to-slate-50 flex flex-col justify-between">
-      {/* Top Navbar */}
-      <header className="border-b border-slate-200/60 bg-white/80 backdrop-blur-md sticky top-0 z-30">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+    <div className="min-h-screen bg-[#F8FAFC] text-[#0F172A] flex flex-col justify-between selection:bg-[#2563EB] selection:text-white">
+      
+      {/* 2. TOP HEADER - Compact, Professional, Fixed Height (14/16) */}
+      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-[#E2E8F0] shadow-xs">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-15 flex items-center justify-between">
+          
+          {/* Left: SAM Logo, Name, Subtitle */}
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold shadow-md shadow-blue-500/20">
-              <GraduationCap className="w-6 h-6" />
+            <div className="w-9 h-9 rounded-xl bg-[#2563EB] text-white flex items-center justify-center shadow-sm shadow-blue-500/20">
+              <GraduationCap className="w-5 h-5" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-lg font-black tracking-tight text-slate-900">SAM</span>
-                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-100 text-blue-800 border border-blue-200 uppercase">
-                  {DEPARTMENT}
-                </span>
+                <span className="text-base font-extrabold tracking-tight text-[#0F172A]">SAM</span>
               </div>
-              <p className="text-[10px] text-slate-500 font-medium">Smart Assignment Manager</p>
+              <p className="text-[11px] font-semibold text-[#64748B] tracking-wide uppercase">
+                SMART ASSIGNMENT MANAGER
+              </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          {/* Right: Role Navigation Buttons */}
+          <nav className="flex items-center gap-1.5 sm:gap-2">
             <Button
               variant="outline"
               size="sm"
               onClick={() => onGoToLogin('admin')}
-              leftIcon={<Shield className="w-3.5 h-3.5" />}
+              leftIcon={<Shield className="w-3.5 h-3.5 text-[#64748B]" />}
+              className="text-xs font-semibold px-2.5 sm:px-3 border-[#E2E8F0] hover:bg-slate-50 hover:text-[#0F172A]"
             >
               Admin
             </Button>
@@ -53,6 +60,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               variant="outline"
               size="sm"
               onClick={() => onGoToLogin('staff')}
+              className="text-xs font-semibold px-2.5 sm:px-3 border-[#E2E8F0] hover:bg-slate-50 hover:text-[#0F172A]"
             >
               Staff
             </Button>
@@ -60,153 +68,361 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               variant="primary"
               size="sm"
               onClick={() => onGoToLogin('student')}
+              className="text-xs font-semibold px-3 sm:px-3.5 bg-[#2563EB] hover:bg-blue-700 text-white shadow-xs"
             >
               Student
             </Button>
-          </div>
+          </nav>
         </div>
       </header>
 
-      {/* Hero Section */}
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-10 sm:py-16 text-center space-y-8">
-        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-100/80 border border-blue-200 text-blue-800 text-xs font-bold tracking-wide">
-          <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse" />
-          <span>Exclusive for {DEPARTMENT_FULL} (1st, 3rd, 4th, 5th Sem)</span>
-        </div>
+      {/* Main Content Area */}
+      <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-8 sm:py-14 space-y-12 sm:space-y-16">
+        
+        {/* 3. HERO SECTION - Clean, Balanced, No Huge Empty Spaces, No Excessive Gradients */}
+        <section className="text-center space-y-4 max-w-3xl mx-auto pt-2 sm:pt-4">
+          
+          {/* Small Badge */}
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 border border-blue-200/80 text-[#2563EB] text-xs font-semibold tracking-wide">
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>Simple • Smart • Organized</span>
+          </div>
 
-        <h1 className="text-3xl sm:text-5xl font-black text-slate-900 tracking-tight max-w-3xl mx-auto leading-tight sm:leading-tight">
-          Smart Assignment Management for <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">CSE Department</span>
-        </h1>
+          {/* Main Heading */}
+          <h1 className="text-3xl sm:text-5xl font-extrabold text-[#0F172A] tracking-tight leading-[1.15] sm:leading-[1.15]">
+            Assignment Management, <span className="text-[#2563EB]">Simplified.</span>
+          </h1>
 
-        <p className="text-sm sm:text-lg text-slate-600 max-w-2xl mx-auto leading-relaxed">
-          Admin manages Staff, Students & Subjects. Staff sets assignments and grades. Students complete notebook assignments and submit Google Drive sharing links.
-        </p>
+          {/* Supporting Text */}
+          <p className="text-sm sm:text-base text-[#64748B] max-w-2xl mx-auto leading-relaxed font-normal">
+            Create assignments, submit work, review submissions and manage academic progress — all in one place.
+          </p>
+        </section>
 
-        {/* 3 Portal Cards: Admin, Staff, Student */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 max-w-5xl mx-auto pt-4 text-left">
-          {/* Admin Portal Box */}
-          <Card hoverable className="p-6 sm:p-7 border-slate-200 bg-white relative overflow-hidden group flex flex-col justify-between">
-            <div>
-              <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-800 flex items-center justify-center font-bold mb-4 group-hover:scale-105 transition-transform">
-                <Shield className="w-6 h-6 text-slate-800" />
+        {/* 4. CHOOSE YOUR PORTAL SECTION */}
+        <section className="space-y-6">
+          <div className="text-center space-y-1">
+            <h2 className="text-xl sm:text-2xl font-bold text-[#0F172A] tracking-tight">
+              Choose your portal
+            </h2>
+            <p className="text-xs sm:text-sm text-[#64748B]">
+              Select the portal that matches your role.
+            </p>
+          </div>
+
+          {/* Three Role Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 max-w-5xl mx-auto">
+            
+            {/* 1. ADMIN PORTAL CARD */}
+            <div 
+              onClick={() => onGoToLogin('admin')}
+              className="group bg-white rounded-2xl border border-[#E2E8F0] p-6 flex flex-col justify-between transition-all duration-200 hover:-translate-y-1 hover:border-[#CBD5E1] hover:shadow-md cursor-pointer"
+            >
+              <div>
+                {/* Sticker Illustration */}
+                <div className="mb-4 flex justify-center py-2">
+                  <AdminSticker className="w-24 h-24" />
+                </div>
+
+                <div className="space-y-1.5 text-center sm:text-left">
+                  <h3 className="text-lg font-bold text-[#0F172A]">
+                    Admin Portal
+                  </h3>
+                  <p className="text-xs sm:text-sm text-[#64748B] leading-relaxed">
+                    Manage staff, students, subjects and academic settings.
+                  </p>
+                </div>
               </div>
-              <h2 className="text-lg font-bold text-slate-900 mb-1">Admin Portal</h2>
-              <p className="text-xs sm:text-sm text-slate-500 mb-5 leading-relaxed">
-                Add and manage Staff and Students. Configure Semesters, Subjects and Staff Teaching Assignments.
-              </p>
-            </div>
 
-            <div className="pt-2">
-              <Button
-                variant="outline"
-                size="md"
-                fullWidth
-                onClick={() => onGoToLogin('admin')}
-                rightIcon={<ArrowRight className="w-4 h-4" />}
-                className="hover:bg-slate-900 hover:text-white"
-              >
-                Admin Sign In
-              </Button>
-            </div>
-          </Card>
-
-          {/* Staff Portal Box */}
-          <Card hoverable className="p-6 sm:p-7 border-blue-200 bg-white relative overflow-hidden group flex flex-col justify-between">
-            <div>
-              <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-700 flex items-center justify-center font-bold mb-4 group-hover:scale-105 transition-transform">
-                <GraduationCap className="w-6 h-6" />
+              <div className="pt-6">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onGoToLogin('admin');
+                  }}
+                  className="w-full py-2.5 px-4 rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] text-[#0F172A] text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 group-hover:bg-[#0F172A] group-hover:text-white group-hover:border-[#0F172A] transition-colors duration-150"
+                >
+                  <span>Open Admin Portal</span>
+                  <ArrowRight className="w-4 h-4 transition-transform duration-150 group-hover:translate-x-1" />
+                </button>
               </div>
-              <h2 className="text-lg font-bold text-slate-900 mb-1">Staff / Teacher Portal</h2>
-              <p className="text-xs sm:text-sm text-slate-500 mb-5 leading-relaxed">
-                Login with Mobile Number. View assigned subjects, publish notebook assignments, review Google Drive submissions and award marks /10.
-              </p>
             </div>
 
-            <div className="pt-2">
-              <Button
-                variant="primary"
-                size="md"
-                fullWidth
-                onClick={() => onGoToLogin('staff')}
-                rightIcon={<ArrowRight className="w-4 h-4" />}
-              >
-                Staff Sign In
-              </Button>
-            </div>
-          </Card>
+            {/* 2. STAFF / TEACHER PORTAL CARD */}
+            <div 
+              onClick={() => onGoToLogin('staff')}
+              className="group bg-white rounded-2xl border border-[#E2E8F0] p-6 flex flex-col justify-between transition-all duration-200 hover:-translate-y-1 hover:border-blue-300 hover:shadow-md cursor-pointer"
+            >
+              <div>
+                {/* Sticker Illustration */}
+                <div className="mb-4 flex justify-center py-2">
+                  <TeacherSticker className="w-24 h-24" />
+                </div>
 
-          {/* Student Portal Box */}
-          <Card hoverable className="p-6 sm:p-7 border-indigo-200 bg-white relative overflow-hidden group flex flex-col justify-between">
-            <div>
-              <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-700 flex items-center justify-center font-bold mb-4 group-hover:scale-105 transition-transform">
-                <BookOpen className="w-6 h-6" />
+                <div className="space-y-1.5 text-center sm:text-left">
+                  <h3 className="text-lg font-bold text-[#0F172A]">
+                    Staff / Teacher Portal
+                  </h3>
+                  <p className="text-xs sm:text-sm text-[#64748B] leading-relaxed">
+                    Create assignments, review student submissions and manage evaluations.
+                  </p>
+                </div>
               </div>
-              <h2 className="text-lg font-bold text-slate-900 mb-1">Student Portal</h2>
-              <p className="text-xs sm:text-sm text-slate-500 mb-5 leading-relaxed">
-                Login with Diploma PIN. Access your semester subjects, submit notebook photos via Google Drive links, and view verified marks & feedback.
-              </p>
+
+              <div className="pt-6">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onGoToLogin('staff');
+                  }}
+                  className="w-full py-2.5 px-4 rounded-xl bg-[#2563EB] text-white text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 hover:bg-blue-700 shadow-xs transition-colors duration-150"
+                >
+                  <span>Open Staff Portal</span>
+                  <ArrowRight className="w-4 h-4 transition-transform duration-150 group-hover:translate-x-1" />
+                </button>
+              </div>
             </div>
 
-            <div className="pt-2">
-              <Button
-                variant="primary"
-                size="md"
-                fullWidth
-                onClick={() => onGoToLogin('student')}
-                rightIcon={<ArrowRight className="w-4 h-4" />}
-                className="bg-indigo-600 hover:bg-indigo-700 shadow-indigo-500/20"
-              >
-                Student Sign In
-              </Button>
-            </div>
-          </Card>
-        </div>
+            {/* 3. STUDENT PORTAL CARD */}
+            <div 
+              onClick={() => onGoToLogin('student')}
+              className="group bg-white rounded-2xl border border-[#E2E8F0] p-6 flex flex-col justify-between transition-all duration-200 hover:-translate-y-1 hover:border-indigo-300 hover:shadow-md cursor-pointer"
+            >
+              <div>
+                {/* Sticker Illustration */}
+                <div className="mb-4 flex justify-center py-2">
+                  <StudentSticker className="w-24 h-24" />
+                </div>
 
-        {/* Notice: No Public Registration */}
-        <div className="p-3 bg-slate-100/80 rounded-xl border border-slate-200 text-xs text-slate-600 max-w-xl mx-auto">
-          🔒 <strong>Official Portal Notice:</strong> Staff and Student accounts are issued exclusively by the College Admin. Public registration is not permitted.
-        </div>
+                <div className="space-y-1.5 text-center sm:text-left">
+                  <h3 className="text-lg font-bold text-[#0F172A]">
+                    Student Portal
+                  </h3>
+                  <p className="text-xs sm:text-sm text-[#64748B] leading-relaxed">
+                    View assignments, submit your work and check marks and feedback.
+                  </p>
+                </div>
+              </div>
 
-        {/* Feature badges */}
-        <div className="pt-8 border-t border-slate-200/60 max-w-4xl mx-auto grid grid-cols-2 sm:grid-cols-4 gap-3 text-left">
-          <div className="flex items-start gap-2.5 p-3 rounded-xl bg-white/80 border border-slate-200/60">
-            <ShieldCheck className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
-            <div>
-              <h5 className="text-xs font-bold text-slate-800">Direct Credentials</h5>
-              <p className="text-[10px] text-slate-500">Mobile Number & College PIN</p>
+              <div className="pt-6">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onGoToLogin('student');
+                  }}
+                  className="w-full py-2.5 px-4 rounded-xl bg-[#4F46E5] text-white text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 hover:bg-indigo-700 shadow-xs transition-colors duration-150"
+                >
+                  <span>Open Student Portal</span>
+                  <ArrowRight className="w-4 h-4 transition-transform duration-150 group-hover:translate-x-1" />
+                </button>
+              </div>
             </div>
+
+          </div>
+        </section>
+
+        {/* 6. HOW SAM WORKS SECTION (Clean Horizontal Timeline on Desktop, Vertical on Mobile) */}
+        <section className="space-y-6 pt-4">
+          <div className="text-center space-y-1">
+            <h2 className="text-xl sm:text-2xl font-bold text-[#0F172A] tracking-tight">
+              How SAM Works
+            </h2>
+            <p className="text-xs sm:text-sm text-[#64748B]">
+              A streamlined, 4-step collaborative academic workflow.
+            </p>
           </div>
 
-          <div className="flex items-start gap-2.5 p-3 rounded-xl bg-white/80 border border-slate-200/60">
-            <FolderCheck className="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" />
-            <div>
-              <h5 className="text-xs font-bold text-slate-800">Google Drive Links</h5>
-              <p className="text-[10px] text-slate-500">Notebook photos stored safely</p>
-            </div>
-          </div>
+          <div className="max-w-5xl mx-auto">
+            {/* Desktop Horizontal Timeline */}
+            <div className="hidden md:grid md:grid-cols-4 gap-4 relative">
+              {/* Timeline Connector Line */}
+              <div className="absolute top-5 left-8 right-8 h-0.5 bg-[#E2E8F0] z-0" />
 
-          <div className="flex items-start gap-2.5 p-3 rounded-xl bg-white/80 border border-slate-200/60">
-            <Award className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-            <div>
-              <h5 className="text-xs font-bold text-slate-800">Evaluation / 10</h5>
-              <p className="text-[10px] text-slate-500">Fast marks & written feedback</p>
-            </div>
-          </div>
+              {/* Step 01 */}
+              <div className="relative z-10 bg-white rounded-2xl border border-[#E2E8F0] p-5 space-y-3 shadow-xs">
+                <div className="flex items-center justify-between">
+                  <div className="w-10 h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center font-bold text-xs shadow-xs">
+                    <UserCheck className="w-5 h-5" />
+                  </div>
+                  <span className="text-xs font-black text-[#94A3B8] tracking-wider">01</span>
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-[#0F172A]">Admin Setup</h4>
+                  <p className="text-xs text-[#64748B] mt-1 leading-relaxed">
+                    Admin manages students, staff and subjects.
+                  </p>
+                </div>
+              </div>
 
-          <div className="flex items-start gap-2.5 p-3 rounded-xl bg-white/80 border border-slate-200/60">
-            <Smartphone className="w-4 h-4 text-purple-600 shrink-0 mt-0.5" />
-            <div>
-              <h5 className="text-xs font-bold text-slate-800">PWA Mobile Ready</h5>
-              <p className="text-[10px] text-slate-500">Installable on all devices</p>
+              {/* Step 02 */}
+              <div className="relative z-10 bg-white rounded-2xl border border-[#E2E8F0] p-5 space-y-3 shadow-xs">
+                <div className="flex items-center justify-between">
+                  <div className="w-10 h-10 rounded-xl bg-[#2563EB] text-white flex items-center justify-center font-bold text-xs shadow-xs">
+                    <FileText className="w-5 h-5" />
+                  </div>
+                  <span className="text-xs font-black text-[#94A3B8] tracking-wider">02</span>
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-[#0F172A]">Create Assignment</h4>
+                  <p className="text-xs text-[#64748B] mt-1 leading-relaxed">
+                    Staff creates and publishes assignments.
+                  </p>
+                </div>
+              </div>
+
+              {/* Step 03 */}
+              <div className="relative z-10 bg-white rounded-2xl border border-[#E2E8F0] p-5 space-y-3 shadow-xs">
+                <div className="flex items-center justify-between">
+                  <div className="w-10 h-10 rounded-xl bg-[#4F46E5] text-white flex items-center justify-center font-bold text-xs shadow-xs">
+                    <UploadCloud className="w-5 h-5" />
+                  </div>
+                  <span className="text-xs font-black text-[#94A3B8] tracking-wider">03</span>
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-[#0F172A]">Student Submission</h4>
+                  <p className="text-xs text-[#64748B] mt-1 leading-relaxed">
+                    Students complete their work and submit it through the existing workflow.
+                  </p>
+                </div>
+              </div>
+
+              {/* Step 04 */}
+              <div className="relative z-10 bg-white rounded-2xl border border-[#E2E8F0] p-5 space-y-3 shadow-xs">
+                <div className="flex items-center justify-between">
+                  <div className="w-10 h-10 rounded-xl bg-[#10B981] text-white flex items-center justify-center font-bold text-xs shadow-xs">
+                    <CheckCircle2 className="w-5 h-5" />
+                  </div>
+                  <span className="text-xs font-black text-[#94A3B8] tracking-wider">04</span>
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-[#0F172A]">Review & Evaluate</h4>
+                  <p className="text-xs text-[#64748B] mt-1 leading-relaxed">
+                    Staff reviews submissions and provides marks and feedback.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Mobile Vertical Timeline */}
+            <div className="md:hidden space-y-3">
+              {/* Step 01 */}
+              <div className="bg-white rounded-2xl border border-[#E2E8F0] p-4.5 flex items-start gap-3.5 shadow-xs">
+                <div className="w-9 h-9 rounded-xl bg-slate-900 text-white flex items-center justify-center font-bold text-xs shrink-0 mt-0.5">
+                  <UserCheck className="w-4.5 h-4.5" />
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-sm font-bold text-[#0F172A]">Admin Setup</h4>
+                    <span className="text-[11px] font-black text-[#94A3B8]">01</span>
+                  </div>
+                  <p className="text-xs text-[#64748B] mt-0.5 leading-relaxed">
+                    Admin manages students, staff and subjects.
+                  </p>
+                </div>
+              </div>
+
+              {/* Step 02 */}
+              <div className="bg-white rounded-2xl border border-[#E2E8F0] p-4.5 flex items-start gap-3.5 shadow-xs">
+                <div className="w-9 h-9 rounded-xl bg-[#2563EB] text-white flex items-center justify-center font-bold text-xs shrink-0 mt-0.5">
+                  <FileText className="w-4.5 h-4.5" />
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-sm font-bold text-[#0F172A]">Create Assignment</h4>
+                    <span className="text-[11px] font-black text-[#94A3B8]">02</span>
+                  </div>
+                  <p className="text-xs text-[#64748B] mt-0.5 leading-relaxed">
+                    Staff creates and publishes assignments.
+                  </p>
+                </div>
+              </div>
+
+              {/* Step 03 */}
+              <div className="bg-white rounded-2xl border border-[#E2E8F0] p-4.5 flex items-start gap-3.5 shadow-xs">
+                <div className="w-9 h-9 rounded-xl bg-[#4F46E5] text-white flex items-center justify-center font-bold text-xs shrink-0 mt-0.5">
+                  <UploadCloud className="w-4.5 h-4.5" />
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-sm font-bold text-[#0F172A]">Student Submission</h4>
+                    <span className="text-[11px] font-black text-[#94A3B8]">03</span>
+                  </div>
+                  <p className="text-xs text-[#64748B] mt-0.5 leading-relaxed">
+                    Students complete their work and submit it through the existing workflow.
+                  </p>
+                </div>
+              </div>
+
+              {/* Step 04 */}
+              <div className="bg-white rounded-2xl border border-[#E2E8F0] p-4.5 flex items-start gap-3.5 shadow-xs">
+                <div className="w-9 h-9 rounded-xl bg-[#10B981] text-white flex items-center justify-center font-bold text-xs shrink-0 mt-0.5">
+                  <CheckCircle2 className="w-4.5 h-4.5" />
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-sm font-bold text-[#0F172A]">Review & Evaluate</h4>
+                    <span className="text-[11px] font-black text-[#94A3B8]">04</span>
+                  </div>
+                  <p className="text-xs text-[#64748B] mt-0.5 leading-relaxed">
+                    Staff reviews submissions and provides marks and feedback.
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
+        </section>
+
+        {/* 7. SIMPLE INFORMATION STRIP (No Fake Numerical Statistics) */}
+        <section className="bg-white rounded-2xl border border-[#E2E8F0] p-6 max-w-5xl mx-auto shadow-xs">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 text-center divide-y sm:divide-y-0 sm:divide-x divide-[#E2E8F0]">
+            
+            <div className="pt-2 sm:pt-0 sm:px-3 space-y-1">
+              <div className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-slate-100 text-[#0F172A] mb-1">
+                <Layers className="w-4 h-4" />
+              </div>
+              <p className="text-xs font-bold text-[#0F172A] tracking-wide uppercase">Manage</p>
+              <p className="text-xs text-[#64748B]">Students & Staff</p>
+            </div>
+
+            <div className="pt-4 sm:pt-0 sm:px-3 space-y-1">
+              <div className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 text-[#2563EB] mb-1">
+                <FileCheck2 className="w-4 h-4" />
+              </div>
+              <p className="text-xs font-bold text-[#0F172A] tracking-wide uppercase">Create</p>
+              <p className="text-xs text-[#64748B]">Assignments</p>
+            </div>
+
+            <div className="pt-4 sm:pt-0 sm:px-3 space-y-1">
+              <div className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-indigo-50 text-[#4F46E5] mb-1">
+                <Send className="w-4 h-4" />
+              </div>
+              <p className="text-xs font-bold text-[#0F172A] tracking-wide uppercase">Submit</p>
+              <p className="text-xs text-[#64748B]">Student Work</p>
+            </div>
+
+            <div className="pt-4 sm:pt-0 sm:px-3 space-y-1">
+              <div className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-emerald-50 text-[#10B981] mb-1">
+                <Star className="w-4 h-4" />
+              </div>
+              <p className="text-xs font-bold text-[#0F172A] tracking-wide uppercase">Evaluate</p>
+              <p className="text-xs text-[#64748B]">Marks & Feedback</p>
+            </div>
+
+          </div>
+        </section>
+
       </main>
 
-      {/* Footer */}
-      <footer className="py-6 border-t border-slate-200/80 bg-white text-center text-xs text-slate-500">
-        <p>© 2026 SAM — Smart Assignment Manager • Diploma Final-Year Project • {DEPARTMENT_FULL}</p>
+      {/* 10. FOOTER - Minimal, Professional, No Department Restriction */}
+      <footer className="py-6 border-t border-[#E2E8F0] bg-white text-center text-xs text-[#64748B]">
+        <p className="max-w-6xl mx-auto px-4">
+          © 2026 SAM — Smart Assignment Manager • Modern Academic Workflow System
+        </p>
       </footer>
+
     </div>
   );
 };
