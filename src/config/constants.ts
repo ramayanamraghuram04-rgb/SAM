@@ -16,10 +16,12 @@ export const DEFAULT_MAX_MARKS = 10;
 // Common CSE Diploma Curricular Subjects for quick auto-complete / suggestions
 export const SUGGESTED_SUBJECTS: Record<Semester, string[]> = {
   '1st': [
-    'Programming Fundamentals',
-    'Basics of Electrical & Electronics',
-    'Engineering Mathematics',
-    'Computer Concepts',
+    'ENGLISH COMMUNICATION',
+    'ENGG MATHEMATICS',
+    'ENGG PHYSICS',
+    'ENGG CHEMISTRY',
+    'PYTHON PROGRAMMING',
+    'CODING FUNDAMENTALS',
   ],
   '3rd': [
     'C Programming',
