@@ -7,10 +7,10 @@ const env: Record<string, any> =
     : ((globalThis as any)?.process?.env || {});
 
 export const CLOUDINARY_CLOUD_NAME = 
-  (env.VITE_CLOUDINARY_CLOUD_NAME || 'SAM').trim();
+  (env.VITE_CLOUDINARY_CLOUD_NAME || 'jnuxag0x').trim();
 
 export const CLOUDINARY_UPLOAD_PRESET = 
-  (env.VITE_CLOUDINARY_UPLOAD_PRESET || 'SAM-SAMRT ASSIGNMENT MANAGER').trim();
+  (env.VITE_CLOUDINARY_UPLOAD_PRESET || 'SAM-SMART ASSIGNMENT MANAGER').trim();
 
 export const CLOUDINARY_DEFAULT_FOLDER = 'sam/assignments';
 

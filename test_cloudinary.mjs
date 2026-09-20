@@ -86,35 +86,48 @@ async function testUpload() {
   const uploadEndpoint = `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`;
   console.log(`Sending test payload to: ${uploadEndpoint}`);
 
-  try {
-    const res = await fetch(uploadEndpoint, {
-      method: 'POST',
-      body: formData
-    });
+  let lastErr = null;
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const res = await fetch(uploadEndpoint, {
+        method: 'POST',
+        body: formData
+      });
 
-    const data = await res.json();
-    console.log(`HTTP Status: ${res.status}`);
+      const data = await res.json();
+      console.log(`HTTP Status: ${res.status}`);
 
-    if (res.ok && data.secure_url) {
-      console.log('SUCCESS: Cloudinary upload succeeded!');
-      console.log('  - secure_url:    ', data.secure_url);
-      console.log('  - public_id:     ', data.public_id);
-      console.log('  - format:        ', data.format);
-      console.log('  - bytes:         ', data.bytes);
-      console.log('  - width x height:', `${data.width}x${data.height}`);
-      console.log('====================================================');
-      console.log('CLOUDINARY STATUS: VERIFIED AND CONNECTED');
-      console.log('====================================================');
-    } else {
-      console.log('Response Details:', JSON.stringify(data, null, 2));
-      console.log('====================================================');
-      console.log('CLOUDINARY STATUS: ENDPOINT REACHABLE — PRESET CONFIGURATION REQUIRED');
-      console.log(`Cloudinary Message: ${data.error?.message || 'Unknown error'}`);
-      console.log('====================================================');
+      if (res.ok && data.secure_url) {
+        console.log('SUCCESS: Cloudinary upload succeeded!');
+        console.log('  - secure_url:    ', data.secure_url);
+        console.log('  - public_id:     ', data.public_id);
+        console.log('  - format:        ', data.format);
+        console.log('  - bytes:         ', data.bytes);
+        console.log('  - width x height:', `${data.width}x${data.height}`);
+        console.log('====================================================');
+        console.log('CLOUDINARY STATUS: VERIFIED AND CONNECTED');
+        console.log('====================================================');
+        return;
+      } else {
+        console.log('Response Details:', JSON.stringify(data, null, 2));
+        console.log('====================================================');
+        console.log('CLOUDINARY STATUS: ENDPOINT REACHABLE — PRESET NOT FOUND');
+        console.log(`Cloudinary Message: ${data.error?.message || 'Unknown error'}`);
+        console.log('====================================================');
+        return;
+      }
+    } catch (err) {
+      lastErr = err;
+      if (attempt < 3) {
+        await new Promise(r => setTimeout(r, 1000));
+      }
     }
-  } catch (err) {
-    console.error('Network failure connecting to Cloudinary:', err.message);
+  }
+
+  if (lastErr) {
+    console.error('Network failure connecting to Cloudinary:', lastErr.message, lastErr.cause || '');
   }
 }
 
 testUpload();
+
