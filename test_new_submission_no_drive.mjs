@@ -153,6 +153,16 @@ assert(
   '13. Legacy Google Drive submissions remain viewable and backward compatible'
 );
 
+// 14. Mandatory Top-of-Page Code Check Popup & Done Gating
+assert(
+  modalSrc.includes('showCodeCheckPopup') &&
+  modalSrc.includes('hasConfirmedCodeOnAllPages') &&
+  modalSrc.includes('btn-confirm-code-done') &&
+  modalSrc.includes('top of every page') &&
+  modalSrc.includes('!hasConfirmedCodeOnAllPages'),
+  '14. Mandatory popup displays code check reminder and allows capture only after clicking Done'
+);
+
 console.log('\n----------------------------------------------------');
 console.log(`Results: ${passedTests} / ${totalTests} assertions passed successfully.`);
 console.log('====================================================');

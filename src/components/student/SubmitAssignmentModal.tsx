@@ -71,6 +71,10 @@ export const SubmitAssignmentModal: React.FC<SubmitAssignmentModalProps> = ({
   const [isConfirmed, setIsConfirmed] = useState<boolean>(false);
   const [createdSubmission, setCreatedSubmission] = useState<Submission | null>(null);
 
+  // Mandatory Top-of-Page Code Check Popup State
+  const [hasConfirmedCodeOnAllPages, setHasConfirmedCodeOnAllPages] = useState<boolean>(false);
+  const [showCodeCheckPopup, setShowCodeCheckPopup] = useState<boolean>(false);
+
   // Camera stream & hardware states
   const [isCameraStarting, setIsCameraStarting] = useState<boolean>(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
@@ -199,6 +203,8 @@ export const SubmitAssignmentModal: React.FC<SubmitAssignmentModalProps> = ({
       // Start in verification_code view if no captured pages are pending
       if (capturedPages.length === 0 && !currentPendingPage) {
         setView('verification_code');
+        setHasConfirmedCodeOnAllPages(false);
+        setShowCodeCheckPopup(false);
       }
       fetchOrCreateCode();
     }
@@ -207,6 +213,9 @@ export const SubmitAssignmentModal: React.FC<SubmitAssignmentModalProps> = ({
   useEffect(() => {
     if (isOpen && view === 'camera') {
       startCameraStream();
+      if (!hasConfirmedCodeOnAllPages) {
+        setShowCodeCheckPopup(true);
+      }
     } else {
       stopCameraStream();
     }
@@ -214,11 +223,13 @@ export const SubmitAssignmentModal: React.FC<SubmitAssignmentModalProps> = ({
     return () => {
       stopCameraStream();
     };
-  }, [isOpen, view, startCameraStream, stopCameraStream]);
+  }, [isOpen, view, hasConfirmedCodeOnAllPages, startCameraStream, stopCameraStream]);
 
   // Reset state on modal close
   const handleModalClose = () => {
     stopCameraStream();
+    setHasConfirmedCodeOnAllPages(false);
+    setShowCodeCheckPopup(false);
     onClose();
   };
 
@@ -226,6 +237,10 @@ export const SubmitAssignmentModal: React.FC<SubmitAssignmentModalProps> = ({
    * Capture current frame from camera and compress to ~150 KB with watermark
    */
   const handleCaptureFrame = async () => {
+    if (!hasConfirmedCodeOnAllPages) {
+      setShowCodeCheckPopup(true);
+      return;
+    }
     if (!videoRef.current || isCameraStarting) return;
 
     try {
@@ -508,7 +523,10 @@ export const SubmitAssignmentModal: React.FC<SubmitAssignmentModalProps> = ({
                     variant="primary"
                     size="lg"
                     fullWidth
-                    onClick={() => setView('camera')}
+                    onClick={() => {
+                      setView('camera');
+                      setShowCodeCheckPopup(true);
+                    }}
                     leftIcon={<Camera className="w-5 h-5" />}
                     className="py-3 text-sm font-bold shadow-md hover:shadow-lg transition-all"
                   >
@@ -593,6 +611,25 @@ export const SubmitAssignmentModal: React.FC<SubmitAssignmentModalProps> = ({
                   </button>
                 </div>
 
+                {/* Top Code Check Warning Pill if not confirmed */}
+                {!hasConfirmedCodeOnAllPages && (
+                  <div className="absolute top-14 inset-x-3 sm:inset-x-6 z-20">
+                    <button
+                      type="button"
+                      onClick={() => setShowCodeCheckPopup(true)}
+                      className="w-full p-2.5 rounded-xl bg-amber-500/95 hover:bg-amber-500 text-slate-950 font-bold text-xs shadow-lg backdrop-blur-xs flex items-center justify-between gap-2 border border-amber-300 animate-pulse cursor-pointer"
+                    >
+                      <div className="flex items-center gap-1.5 text-left">
+                        <AlertCircle className="w-4 h-4 text-slate-950 shrink-0" />
+                        <span>Code must be written on top of every page.</span>
+                      </div>
+                      <span className="px-2.5 py-1 rounded-lg bg-slate-950 text-white font-extrabold text-[11px] shrink-0">
+                        Check & Done
+                      </span>
+                    </button>
+                  </div>
+                )}
+
                 {/* Large Mobile-Friendly Shutter Button */}
                 <div className="absolute bottom-4 inset-x-0 flex items-center justify-center gap-4">
                   {capturedPages.length > 0 && (
@@ -607,13 +644,26 @@ export const SubmitAssignmentModal: React.FC<SubmitAssignmentModalProps> = ({
 
                   <button
                     type="button"
+                    id="camera-shutter-btn"
                     onClick={handleCaptureFrame}
                     disabled={isCameraStarting}
                     aria-label="Capture page photo"
-                    className="w-16 h-16 sm:w-18 sm:h-18 rounded-full border-4 border-white bg-white/30 hover:bg-white/40 active:scale-95 transition-all flex items-center justify-center shadow-xl group"
+                    className={`w-16 h-16 sm:w-18 sm:h-18 rounded-full border-4 transition-all flex items-center justify-center shadow-xl group cursor-pointer ${
+                      !hasConfirmedCodeOnAllPages
+                        ? 'border-amber-400 bg-amber-400/20 hover:bg-amber-400/30 ring-4 ring-amber-400/40 animate-pulse'
+                        : 'border-white bg-white/30 hover:bg-white/40 active:scale-95'
+                    }`}
                   >
-                    <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-white group-hover:scale-95 transition-transform flex items-center justify-center text-blue-600">
-                      <Camera className="w-6 h-6" />
+                    <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-full flex items-center justify-center transition-transform ${
+                      !hasConfirmedCodeOnAllPages
+                        ? 'bg-amber-400 text-slate-950 font-black text-xs'
+                        : 'bg-white group-hover:scale-95 text-blue-600'
+                    }`}>
+                      {!hasConfirmedCodeOnAllPages ? (
+                        <span className="text-[10px] uppercase tracking-wider font-extrabold">Check</span>
+                      ) : (
+                        <Camera className="w-6 h-6" />
+                      )}
                     </div>
                   </button>
 
@@ -1024,6 +1074,70 @@ export const SubmitAssignmentModal: React.FC<SubmitAssignmentModalProps> = ({
               >
                 View Submission
               </Button>
+            </div>
+          </div>
+        )}
+
+        {/* =================================================================== */}
+        {/* MANDATORY TOP-OF-PAGE CODE CHECK CONFIRMATION POPUP */}
+        {/* =================================================================== */}
+        {showCodeCheckPopup && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-xs animate-in fade-in duration-200">
+            <div className="bg-white rounded-3xl p-6 sm:p-7 max-w-md w-full shadow-2xl border border-slate-200/80 text-center space-y-5 animate-in zoom-in-95 duration-200">
+              
+              {/* Alert Header Icon */}
+              <div className="w-16 h-16 rounded-2xl bg-amber-100 border border-amber-200 text-amber-600 flex items-center justify-center mx-auto shadow-inner">
+                <AlertCircle className="w-8 h-8 text-amber-600" />
+              </div>
+
+              {/* Popup Title and Message */}
+              <div className="space-y-2">
+                <span className="text-[11px] font-bold text-amber-700 uppercase tracking-wider bg-amber-50 border border-amber-200 px-3 py-0.5 rounded-full inline-block">
+                  Important Requirement Before Capturing
+                </span>
+                <h3 className="text-xl font-black text-slate-900 tracking-tight">
+                  Check All Notebook Pages
+                </h3>
+                <p className="text-xs sm:text-sm text-slate-600 font-medium leading-relaxed">
+                  Please check all pages! You have to mention the verification code at the <strong className="text-slate-900 underline decoration-amber-500 decoration-2">top of every page</strong> before capturing photos.
+                </p>
+              </div>
+
+              {/* Big Verification Code Display */}
+              <div className="p-4 rounded-2xl bg-gradient-to-br from-blue-50/80 via-white to-indigo-50/80 border-2 border-blue-200 shadow-xs space-y-1">
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+                  Write This Code on Top of Every Page:
+                </span>
+                <span
+                  id="mandatory-code-check-val"
+                  className="font-mono text-3xl sm:text-4xl font-black text-blue-700 tracking-widest inline-block py-0.5 select-all"
+                >
+                  {verificationCode || '...'}
+                </span>
+                <p className="text-[11px] text-slate-500 font-medium">
+                  Page 1, Page 2, Page 3... each page must show this code at the top.
+                </p>
+              </div>
+
+              {/* Confirmation Action Button */}
+              <div className="pt-2 space-y-2">
+                <button
+                  type="button"
+                  id="btn-confirm-code-done"
+                  onClick={() => {
+                    setHasConfirmedCodeOnAllPages(true);
+                    setShowCodeCheckPopup(false);
+                  }}
+                  className="w-full py-3.5 px-6 rounded-xl bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-black text-base shadow-lg shadow-blue-500/25 transition-all active:scale-[0.98] cursor-pointer flex items-center justify-center gap-2"
+                >
+                  <Check className="w-5 h-5 text-white" />
+                  <span>Done</span>
+                </button>
+                <p className="text-[11px] text-slate-400 font-medium">
+                  Camera capture is allowed only after clicking Done.
+                </p>
+              </div>
+
             </div>
           </div>
         )}
