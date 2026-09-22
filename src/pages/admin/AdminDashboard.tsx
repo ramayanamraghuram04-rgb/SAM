@@ -19,7 +19,7 @@ import { authService } from '../../services/authService';
 import { academicService } from '../../services/academicService';
 import { assignmentService } from '../../services/assignmentService';
 import { submissionService } from '../../services/submissionService';
-import { StaffUser, StudentUser, Subject, TeachingAssignment, Assignment, Submission } from '../../types';
+import { StaffUser, StudentUser, Subject, TeachingAssignment, Assignment, Submission, ClassItem } from '../../types';
 import { DEPARTMENT, DEPARTMENT_FULL } from '../../config/constants';
 
 interface AdminDashboardProps {
@@ -31,6 +31,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigateTab })
   const [staffList, setStaffList] = useState<StaffUser[]>([]);
   const [studentList, setStudentList] = useState<StudentUser[]>([]);
   const [subjectList, setSubjectList] = useState<Subject[]>([]);
+  const [classList, setClassList] = useState<ClassItem[]>([]);
   const [teachingAssignments, setTeachingAssignments] = useState<TeachingAssignment[]>([]);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
@@ -38,16 +39,18 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigateTab })
   const loadData = async () => {
     setLoading(true);
     try {
-      // Ensure default subjects are seeded if fresh project
+      // Ensure default subjects and classes are seeded
       await academicService.seedDefaultSubjects();
+      await academicService.seedDefaultClasses();
 
-      const [staff, students, subjects, ta, asgs, subs] = await Promise.all([
+      const [staff, students, subjects, ta, asgs, subs, cls] = await Promise.all([
         authService.getAllStaff(),
         authService.getAllStudents(),
         academicService.getAllSubjects(),
         academicService.getAllTeachingAssignments(),
         assignmentService.getAllAssignments(),
         submissionService.getAllSubmissions(),
+        academicService.getAllClasses(),
       ]);
 
       setStaffList(staff);
@@ -56,6 +59,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigateTab })
       setTeachingAssignments(ta);
       setAssignments(asgs);
       setSubmissions(subs);
+      setClassList(cls);
     } catch (err) {
       console.error('Error loading admin dashboard data:', err);
     } finally {
@@ -71,6 +75,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigateTab })
     return <LoadingSpinner message="Loading Admin Dashboard..." />;
   }
 
+  const activeAssignments = assignments.filter((a) => a.status === 'active').length;
   const pendingSubmissions = submissions.filter((s) => s.status === 'submitted' || s.status === 'under_review').length;
   const gradedSubmissions = submissions.filter((s) => s.status === 'checked').length;
 
@@ -83,13 +88,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigateTab })
           <div className="space-y-2 max-w-xl">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-white/90 text-xs font-semibold backdrop-blur-sm border border-white/10">
               <ShieldCheck className="w-3.5 h-3.5 text-blue-400" />
-              <span>{DEPARTMENT_FULL} Administrator</span>
+              <span>{DEPARTMENT_FULL} Management</span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-black tracking-tight">
-              SAM College Administration
+              Welcome Admin
             </h1>
             <p className="text-sm text-slate-300 leading-relaxed">
-              Full control over Staff, Students, Semesters, Subjects and Notebook Assignment workflow.
+              Complete administrative authority over Staff, Students, Classes, Subjects, and Notebook Verification workflow.
             </p>
           </div>
 
@@ -115,71 +120,99 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigateTab })
             <Button
               variant="outline"
               size="sm"
-              onClick={() => onNavigateTab('teaching')}
+              onClick={() => onNavigateTab('classes')}
               className="bg-white/10 hover:bg-white/20 text-white border-white/20 text-xs"
             >
-              Assign Teaching
+              Manage Classes
             </Button>
           </div>
         </div>
       </div>
 
-      {/* Statistics Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
-        <Card hoverable onClick={() => onNavigateTab('staff')} className="p-5 cursor-pointer border-slate-200">
+      {/* Six Exact Statistics Cards Required by Step 10 */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
+        {/* 1. Total Students */}
+        <Card hoverable onClick={() => onNavigateTab('students')} className="p-4 cursor-pointer border-slate-200">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Total Staff</span>
-            <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
-              <GraduationCap className="w-5 h-5" />
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Students</span>
+            <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
+              <BookOpen className="w-4 h-4" />
             </div>
           </div>
-          <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-2xl sm:text-3xl font-black text-slate-900">{staffList.length}</span>
-            <span className="text-xs text-emerald-600 font-semibold">Faculty</span>
+          <div className="mt-2.5">
+            <span className="text-xl sm:text-2xl font-black text-slate-900">{studentList.length}</span>
+            <p className="text-[10px] text-indigo-600 font-semibold mt-0.5">Total Enrolled</p>
           </div>
-          <p className="text-[11px] text-slate-400 mt-1">Active teachers & mentors</p>
         </Card>
 
-        <Card hoverable onClick={() => onNavigateTab('students')} className="p-5 cursor-pointer border-slate-200">
+        {/* 2. Total Staff */}
+        <Card hoverable onClick={() => onNavigateTab('staff')} className="p-4 cursor-pointer border-slate-200">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Total Students</span>
-            <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
-              <BookOpen className="w-5 h-5" />
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Staff</span>
+            <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
+              <GraduationCap className="w-4 h-4" />
             </div>
           </div>
-          <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-2xl sm:text-3xl font-black text-slate-900">{studentList.length}</span>
-            <span className="text-xs text-indigo-600 font-semibold">Enrolled</span>
+          <div className="mt-2.5">
+            <span className="text-xl sm:text-2xl font-black text-slate-900">{staffList.length}</span>
+            <p className="text-[10px] text-blue-600 font-semibold mt-0.5">Active Teachers</p>
           </div>
-          <p className="text-[11px] text-slate-400 mt-1">Across 1st, 3rd, 4th, 5th Sem</p>
         </Card>
 
-        <Card hoverable onClick={() => onNavigateTab('teaching')} className="p-5 cursor-pointer border-slate-200">
+        {/* 3. Total Classes */}
+        <Card hoverable onClick={() => onNavigateTab('classes')} className="p-4 cursor-pointer border-slate-200">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Teaching Classes</span>
-            <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center">
-              <Layers className="w-5 h-5" />
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Classes</span>
+            <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+              <Layers className="w-4 h-4" />
             </div>
           </div>
-          <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-2xl sm:text-3xl font-black text-slate-900">{teachingAssignments.length}</span>
-            <span className="text-xs text-purple-600 font-semibold">Assigned</span>
+          <div className="mt-2.5">
+            <span className="text-xl sm:text-2xl font-black text-slate-900">{classList.length}</span>
+            <p className="text-[10px] text-emerald-600 font-semibold mt-0.5">Academic Classes</p>
           </div>
-          <p className="text-[11px] text-slate-400 mt-1">{subjectList.length} total subjects</p>
         </Card>
 
-        <Card hoverable onClick={() => onNavigateTab('overview')} className="p-5 cursor-pointer border-slate-200">
+        {/* 4. Total Subjects */}
+        <Card hoverable onClick={() => onNavigateTab('subjects')} className="p-4 cursor-pointer border-slate-200">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Submissions</span>
-            <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
-              <FileText className="w-5 h-5" />
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Subjects</span>
+            <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
+              <CheckCircle className="w-4 h-4" />
             </div>
           </div>
-          <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-2xl sm:text-3xl font-black text-slate-900">{submissions.length}</span>
-            <span className="text-xs text-amber-600 font-semibold">{pendingSubmissions} Pending</span>
+          <div className="mt-2.5">
+            <span className="text-xl sm:text-2xl font-black text-slate-900">{subjectList.length}</span>
+            <p className="text-[10px] text-amber-600 font-semibold mt-0.5">Curricular</p>
           </div>
-          <p className="text-[11px] text-slate-400 mt-1">{gradedSubmissions} graded with marks</p>
+        </Card>
+
+        {/* 5. Active Assignments */}
+        <Card hoverable onClick={() => onNavigateTab('assignments')} className="p-4 cursor-pointer border-slate-200">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Assignments</span>
+            <div className="w-8 h-8 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center">
+              <FileText className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="mt-2.5">
+            <span className="text-xl sm:text-2xl font-black text-slate-900">{activeAssignments}</span>
+            <p className="text-[10px] text-purple-600 font-semibold mt-0.5">Active Tasks</p>
+          </div>
+        </Card>
+
+        {/* 6. Pending Submissions */}
+        <Card hoverable onClick={() => onNavigateTab('submissions')} className="p-4 cursor-pointer border-slate-200">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Submissions</span>
+            <div className="w-8 h-8 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center">
+              <TrendingUp className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="mt-2.5">
+            <span className="text-xl sm:text-2xl font-black text-slate-900">{pendingSubmissions}</span>
+            <p className="text-[10px] text-rose-600 font-semibold mt-0.5">Pending Grading</p>
+          </div>
         </Card>
       </div>
 

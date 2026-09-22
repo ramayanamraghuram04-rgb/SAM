@@ -10,16 +10,18 @@ import {
   Clock,
   RotateCcw,
   Camera,
-  Image as ImageIcon
+  Image as ImageIcon,
+  FileText
 } from 'lucide-react';
 import { Assignment, Submission } from '../../types';
 import { submissionService } from '../../services/submissionService';
 import { useAuth } from '../../context/AuthContext';
 import { Card } from '../../components/common/Card';
 import { Button } from '../../components/common/Button';
-import { SemesterBadge, SubmissionStatusBadge } from '../../components/common/Badge';
+import { SemesterBadge, AssignmentDisplayStatusBadge } from '../../components/common/Badge';
 import { SubmitAssignmentModal } from '../../components/student/SubmitAssignmentModal';
-import { formatDate, formatDateTime, getDaysRemaining } from '../../utils/dateUtils';
+import { NotebookImageViewer } from '../../components/common/NotebookImageViewer';
+import { formatDate, formatDateTime, getDaysRemaining, getAssignmentDisplayStatus } from '../../utils/dateUtils';
 
 interface StudentAssignmentDetailsPageProps {
   assignment: Assignment;
@@ -54,7 +56,7 @@ export const StudentAssignmentDetailsPage: React.FC<StudentAssignmentDetailsPage
   }, [assignment.id, user?.uid]);
 
   const deadline = getDaysRemaining(assignment.dueDate);
-  const status = submission?.status || 'not_submitted';
+  const displayStatus = getAssignmentDisplayStatus(assignment, submission);
 
   return (
     <div className="space-y-6">
@@ -78,7 +80,7 @@ export const StudentAssignmentDetailsPage: React.FC<StudentAssignmentDetailsPage
           </div>
 
           <div className="flex items-center gap-3">
-            <SubmissionStatusBadge status={status} />
+            <AssignmentDisplayStatusBadge displayStatus={displayStatus} />
             <span className="text-xs font-bold text-blue-700 bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-200">
               Max: {assignment.maxMarks} Marks
             </span>
@@ -87,13 +89,22 @@ export const StudentAssignmentDetailsPage: React.FC<StudentAssignmentDetailsPage
 
         {/* Question Details */}
         <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/70 space-y-2">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-            Notebook Question / Instructions
+          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+            <FileText className="w-3.5 h-3.5 text-blue-600" />
+            <span>Assignment Question</span>
           </span>
           <p className="text-sm text-slate-800 leading-relaxed whitespace-pre-line">
             {assignment.description}
           </p>
         </div>
+
+        {/* Optional Instructions */}
+        {assignment.instructions && (
+          <div className="p-3.5 rounded-xl bg-blue-50/60 border border-blue-100 text-xs text-blue-900 space-y-1">
+            <span className="font-bold uppercase tracking-wider text-blue-800">Instructions:</span>
+            <p className="whitespace-pre-line leading-relaxed">{assignment.instructions}</p>
+          </div>
+        )}
 
         <div className="flex flex-wrap items-center gap-4 text-xs text-slate-500 pt-2 border-t border-slate-100">
           <div className="flex items-center gap-1.5">
@@ -118,57 +129,52 @@ export const StudentAssignmentDetailsPage: React.FC<StudentAssignmentDetailsPage
       <Card className="p-6 space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="text-base font-bold text-slate-900">Your Submission</h3>
-          <SubmissionStatusBadge status={status} />
+          <AssignmentDisplayStatusBadge displayStatus={displayStatus} />
         </div>
 
         {submission ? (
           <div className="space-y-3 pt-2">
             <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 space-y-3 text-xs">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
                 <span className="font-semibold text-slate-700 flex items-center gap-1.5">
                   <Camera className="w-3.5 h-3.5 text-blue-600" />
-                  {submission.imageUrls && submission.imageUrls.length > 0 
-                    ? `Captured Pages (${submission.imageUrls.length})` 
-                    : 'Submitted Assignment'}
+                  <span>Submitted • {submission.imageUrls?.length || 1} Page{(submission.imageUrls?.length || 1) > 1 ? 's' : ''}</span>
                 </span>
-                <span className="text-slate-400">{formatDateTime(submission.submittedAt)}</span>
+                <span className="text-slate-500">
+                  Submission Date/Time: <strong className="text-slate-700">{formatDateTime(submission.submittedAt)}</strong>
+                </span>
               </div>
 
-              {/* If Cloudinary camera pages are present, show thumbnails */}
+              <div className="flex items-center gap-2 pt-1">
+                <span className="text-slate-500">Current Status:</span>
+                <AssignmentDisplayStatusBadge displayStatus={displayStatus} />
+              </div>
+
+              {/* Full Interactive Notebook Image Viewer */}
               {submission.imageUrls && submission.imageUrls.length > 0 ? (
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 overflow-x-auto py-1">
-                    {submission.imageUrls.map((url, idx) => (
-                      <a
-                        key={url}
-                        href={url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="relative w-16 h-20 rounded-lg overflow-hidden shrink-0 border border-slate-300 hover:border-blue-500 hover:shadow-md transition-all group"
-                        title={`Open Page ${idx + 1}`}
-                      >
-                        <img src={url} alt={`Page ${idx + 1}`} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
-                        <span className="absolute bottom-0 inset-x-0 bg-black/60 text-white text-[9px] font-bold text-center py-0.5">
-                          P{idx + 1}
-                        </span>
-                      </a>
-                    ))}
-                  </div>
-                  <p className="text-[11px] text-slate-400">
-                    Click any page to view original high-resolution photo in a new tab.
-                  </p>
+                <div className="pt-2">
+                  <NotebookImageViewer
+                    imageUrls={submission.imageUrls}
+                    verificationCode={submission.verificationCode}
+                    maxHeight="max-h-[50vh]"
+                  />
                 </div>
               ) : submission.driveLink ? (
                 /* Legacy Drive Link fallback */
-                <a
-                  href={submission.driveLink}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-600 hover:underline font-mono font-medium truncate block flex items-center gap-1.5"
-                >
-                  <ExternalLink className="w-3.5 h-3.5 shrink-0" />
-                  <span className="truncate">{submission.driveLink}</span>
-                </a>
+                <div className="pt-2">
+                  <a
+                    href={submission.driveLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-3 rounded-xl bg-blue-50 border border-blue-200 text-blue-700 hover:underline font-mono font-medium text-xs flex items-center justify-between group"
+                  >
+                    <span className="flex items-center gap-2 truncate">
+                      <ExternalLink className="w-4 h-4 shrink-0 text-blue-600" />
+                      <span className="truncate">Open Legacy Google Drive Submission</span>
+                    </span>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-blue-600">Open Link ↗</span>
+                  </a>
+                </div>
               ) : null}
 
               {submission.comment && (
@@ -196,44 +202,82 @@ export const StudentAssignmentDetailsPage: React.FC<StudentAssignmentDetailsPage
               </div>
             )}
 
-            {/* If Returned, show Resubmission note */}
+            {/* If Returned, show Returned for Correction */}
             {submission.status === 'returned' && (
               <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 space-y-1.5 text-xs text-rose-900">
-                <div className="font-bold flex items-center gap-1.5">
+                <div className="font-bold flex items-center gap-1.5 text-sm">
                   <RotateCcw className="w-4 h-4 text-rose-600" />
-                  <span>Resubmission Requested</span>
+                  <span>Returned for Correction</span>
                 </div>
                 <p className="italic">
-                  {submission.teacherFeedback || 'Please update your notebook assignment photos and resubmit.'}
+                  {submission.teacherFeedback || 'Please review your notebook assignment, update required pages, and resubmit.'}
                 </p>
               </div>
             )}
 
-            {/* Resubmit button */}
-            <div className="pt-2">
-              <Button
-                variant="outline"
-                size="sm"
-                leftIcon={<Camera className="w-4 h-4 text-blue-600" />}
-                onClick={() => setIsSubmitModalOpen(true)}
-              >
-                {submission.status === 'returned' ? 'Retake & Resubmit Pages' : 'Recapture Assignment Pages'}
-              </Button>
-            </div>
+            {/* Submission History Section */}
+            {submission.history && submission.history.length > 0 && (
+              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2 text-xs">
+                <h4 className="font-bold text-slate-800 flex items-center gap-1.5">
+                  <Clock className="w-3.5 h-3.5 text-slate-500" />
+                  <span>Submission History ({submission.history.length} Previous {submission.history.length === 1 ? 'Version' : 'Versions'})</span>
+                </h4>
+                <div className="space-y-1.5">
+                  {submission.history.map((hist, hIdx) => (
+                    <div key={hIdx} className="p-2.5 bg-white rounded-lg border border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-[11px]">
+                      <span className="text-slate-600">
+                        Version {hIdx + 1}: {hist.submittedAt ? formatDateTime(hist.submittedAt) : 'Previous submission'} • {hist.imageUrls?.length || 1} Pages
+                      </span>
+                      {hist.status && (
+                        <span className="font-semibold uppercase tracking-wider text-slate-500">
+                          Status: {hist.status} {hist.marks !== undefined && hist.marks !== null ? `(${hist.marks} Marks)` : ''}
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Resubmit button if returned or recapture (unless assignment is closed) */}
+            {assignment.status !== 'closed' && assignment.status !== 'archived' ? (
+              <div className="pt-2">
+                <Button
+                  variant={submission.status === 'returned' ? 'primary' : 'outline'}
+                  size="sm"
+                  leftIcon={<Camera className="w-4 h-4" />}
+                  onClick={() => setIsSubmitModalOpen(true)}
+                >
+                  {submission.status === 'returned' ? 'Resubmit Assignment' : 'Recapture Assignment Pages'}
+                </Button>
+              </div>
+            ) : (
+              <div className="p-3 rounded-xl bg-slate-100 border border-slate-200 text-xs font-semibold text-slate-600">
+                This assignment is closed. New submissions are no longer accepted.
+              </div>
+            )}
           </div>
         ) : (
           <div className="text-center py-6 space-y-3">
-            <p className="text-xs text-slate-500 max-w-md mx-auto">
-              You haven't submitted this notebook assignment yet. Use your device camera to capture clear photos of your handwritten notebook pages directly.
-            </p>
-            <Button
-              variant="primary"
-              size="md"
-              leftIcon={<Camera className="w-4 h-4" />}
-              onClick={() => setIsSubmitModalOpen(true)}
-            >
-              Capture & Submit Assignment
-            </Button>
+            {assignment.status === 'closed' || assignment.status === 'archived' ? (
+              <div className="p-4 rounded-xl bg-slate-100 border border-slate-200 text-xs font-semibold text-slate-600 max-w-md mx-auto">
+                This assignment is closed. Submissions are no longer accepted.
+              </div>
+            ) : (
+              <>
+                <p className="text-xs text-slate-500 max-w-md mx-auto">
+                  You haven't submitted this notebook assignment yet. Use your device camera to capture clear photos of your handwritten notebook pages directly.
+                </p>
+                <Button
+                  variant="primary"
+                  size="md"
+                  leftIcon={<Camera className="w-4 h-4" />}
+                  onClick={() => setIsSubmitModalOpen(true)}
+                >
+                  Capture Assignment Pages
+                </Button>
+              </>
+            )}
           </div>
         )}
       </Card>

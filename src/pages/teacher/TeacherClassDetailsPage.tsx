@@ -151,7 +151,7 @@ export const TeacherClassDetailsPage: React.FC<TeacherClassDetailsPageProps> = (
         assignments.length === 0 ? (
           <EmptyState
             title="No assignments posted yet"
-            description="Create questions for your students to complete in their notebook and upload via Google Drive."
+            description="Create questions for your students to complete in their notebook and submit photos via camera."
             actionLabel="Create Assignment"
             onAction={() => setIsCreateAsgModalOpen(true)}
           />

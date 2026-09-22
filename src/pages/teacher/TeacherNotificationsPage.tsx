@@ -38,7 +38,7 @@ export const TeacherNotificationsPage: React.FC = () => {
         <EmptyState
           icon={<Bell className="w-7 h-7" />}
           title="No notifications yet"
-          description="When students accept your class invitations or submit their notebook assignments via Google Drive, you will receive updates here."
+          description="When students accept your class invitations or submit their notebook assignments, you will receive updates here."
         />
       ) : (
         <div className="space-y-2.5">

@@ -11,12 +11,8 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
-    function getUserData() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
-    }
-
-    function getUserRole() {
-      return getUserData().role;
+    function getUserDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid));
     }
 
     function isAdmin() {
@@ -24,61 +20,161 @@ service cloud.firestore {
         request.auth.token.admin == true ||
         request.auth.token.email.matches('.*admin_.*') ||
         (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
-         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin')
+         getUserDoc().data.role == 'admin')
       );
     }
 
-    // 1. Users collection (Admin has full control to create, read, update, and delete)
-    match /users/{userId} {
-      allow read, write: if isAuthenticated();
+    function isStaff() {
+      return isAuthenticated() && (
+        isAdmin() ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+         (getUserDoc().data.role == 'staff' || getUserDoc().data.role == 'teacher'))
+      );
     }
 
-    // 2. Staff / Faculty collection
+    function isStudent() {
+      return isAuthenticated() && (
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        getUserDoc().data.role == 'student'
+      );
+    }
+
+    // 1. Users collection
+    // Role changes are strictly forbidden from clients; Admin manages roles.
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isAdmin() || (isOwner(userId) && request.resource.data.role != 'admin');
+      allow update: if isAdmin() || (
+        isOwner(userId) && 
+        request.resource.data.role == resource.data.role && 
+        request.resource.data.uid == resource.data.uid
+      );
+      allow delete: if isAdmin();
+    }
+
+    // 2. Staff / Faculty collection (Managed by Admin)
     match /staff/{staffId} {
-      allow read, write: if isAuthenticated();
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
     }
 
     match /teachers/{teacherId} {
-      allow read, write: if isAuthenticated();
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
     }
 
-    // 3. Students collection
+    // 3. Students collection (Managed by Admin)
     match /students/{studentId} {
-      allow read, write: if isAuthenticated();
+      allow read: if isAuthenticated();
+      allow write: if isAdmin() || (isOwner(studentId) && request.resource.data.uid == resource.data.uid);
     }
 
     // 4. Subjects collection (Curricular Subjects across 1st, 3rd, 4th, 5th Semesters)
     match /subjects/{subjectId} {
-      allow read, write: if isAuthenticated();
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
     }
 
     // 5. Teaching Assignments (Admin maps Faculty to Semester + Subject)
     match /teachingAssignments/{assignmentId} {
-      allow read, write: if isAuthenticated();
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
     }
 
     match /teaching_assignments/{assignmentId} {
-      allow read, write: if isAuthenticated();
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
     }
 
-    // 6. Classes collection
+    // 6. Classes collection (Admin manages class structures)
     match /classes/{classId} {
-      allow read, write: if isAuthenticated();
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
     }
 
-    // 7. Assignments collection
+    // 7. Assignments collection (Created and managed by Staff or Admin)
+    // Students can only read published assignments; drafts are strictly hidden from students.
+    // Staff can create and manage only their own assignments.
     match /assignments/{assignmentId} {
-      allow read, write: if isAuthenticated();
+      allow read: if isAdmin() || isStaff() || (
+        isStudent() && (
+          resource.data.published == true || 
+          resource.data.status == 'published' || 
+          resource.data.status == 'active'
+        )
+      );
+      allow create: if isAdmin() || (
+        isStaff() && (
+          request.resource.data.teacherId == request.auth.uid ||
+          request.resource.data.staffId == request.auth.uid
+        )
+      );
+      allow update: if isAdmin() || (
+        isStaff() && (
+          resource.data.teacherId == request.auth.uid ||
+          resource.data.staffId == request.auth.uid
+        ) && (
+          request.resource.data.teacherId == resource.data.teacherId
+        )
+      );
+      allow delete: if isAdmin() || (
+        isStaff() && (
+          resource.data.teacherId == request.auth.uid ||
+          resource.data.staffId == request.auth.uid
+        )
+      );
     }
 
-    // 8. Submissions collection (Google Drive link submissions & marks evaluation)
+    // 8. Submissions collection (Student assignment submissions & notebook verification)
     match /submissions/{submissionId} {
-      allow read, write: if isAuthenticated();
+      allow read: if isAdmin() || (
+        isStaff() && (
+          resource.data.teacherId == request.auth.uid ||
+          !('teacherId' in resource.data)
+        )
+      ) || (
+        isStudent() && (
+          resource.data.studentId == request.auth.uid || 
+          resource.data.studentUid == request.auth.uid
+        )
+      );
+      allow create: if isAdmin() || (
+        isStudent() && (
+          request.resource.data.studentId == request.auth.uid || 
+          request.resource.data.studentUid == request.auth.uid
+        ) && (
+          request.resource.data.marks == null
+        )
+      );
+      allow update: if isAdmin() || (
+        isStaff() && (
+          resource.data.teacherId == request.auth.uid ||
+          !('teacherId' in resource.data)
+        )
+      ) || (
+        isStudent() && (
+          resource.data.studentId == request.auth.uid || 
+          resource.data.studentUid == request.auth.uid
+        ) && (
+          request.resource.data.marks == resource.data.marks
+        )
+      );
+      allow delete: if isAdmin();
     }
 
-    // 9. Notifications collection
+    // 9. Unique Per-Student Assignment Verification Codes
+    match /verification_codes/{codeId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update, delete: if isAdmin() || isStaff();
+    }
+
+    // 10. Notifications collection
     match /notifications/{notificationId} {
-      allow read, write: if isAuthenticated();
+      allow read: if isAdmin() || (isAuthenticated() && resource.data.recipientUid == request.auth.uid);
+      allow create: if isAuthenticated();
+      allow update: if isAdmin() || (isAuthenticated() && resource.data.recipientUid == request.auth.uid);
+      allow delete: if isAdmin();
     }
   }
 }

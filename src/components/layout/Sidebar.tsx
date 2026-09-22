@@ -36,18 +36,23 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, onSelectTab }) => 
 
   const adminItems: NavItem[] = [
     { id: 'home', label: 'Dashboard', icon: <Home className="w-5 h-5" /> },
-    { id: 'staff', label: 'Faculty / Staff', icon: <GraduationCap className="w-5 h-5" /> },
     { id: 'students', label: 'Students', icon: <Users className="w-5 h-5" /> },
+    { id: 'staff', label: 'Faculty / Staff', icon: <GraduationCap className="w-5 h-5" /> },
+    { id: 'classes', label: 'Classes', icon: <Layers className="w-5 h-5" /> },
     { id: 'subjects', label: 'Subjects', icon: <Bookmark className="w-5 h-5" /> },
-    { id: 'teaching', label: 'Teaching Classes', icon: <Layers className="w-5 h-5" /> },
-    { id: 'overview', label: 'Assignments & Subs', icon: <ClipboardList className="w-5 h-5" /> },
-    { id: 'profile', label: 'Admin Profile', icon: <Shield className="w-5 h-5" /> },
+    { id: 'teaching', label: 'Teaching Assignments', icon: <ClipboardList className="w-5 h-5" /> },
+    { id: 'assignments', label: 'Assignments', icon: <FileText className="w-5 h-5" /> },
+    { id: 'submissions', label: 'Submissions', icon: <Award className="w-5 h-5" /> },
+    { id: 'notifications', label: 'Notifications', icon: <Bell className="w-5 h-5" />, badge: unreadCount },
+    { id: 'profile', label: 'Profile', icon: <User className="w-5 h-5" /> },
+    { id: 'settings', label: 'Settings', icon: <Shield className="w-5 h-5" /> },
   ];
 
   const teacherItems: NavItem[] = [
     { id: 'home', label: 'Dashboard', icon: <Home className="w-5 h-5" /> },
     { id: 'classes', label: 'My Classes', icon: <Layers className="w-5 h-5" /> },
     { id: 'assignments', label: 'Assignments', icon: <FileText className="w-5 h-5" /> },
+    { id: 'submissions', label: 'Submissions', icon: <Award className="w-5 h-5" /> },
     { id: 'notifications', label: 'Notifications', icon: <Bell className="w-5 h-5" />, badge: unreadCount },
     { id: 'profile', label: 'Profile', icon: <User className="w-5 h-5" /> },
   ];

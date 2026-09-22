@@ -6,7 +6,8 @@ import {
   query, 
   where, 
   setDoc, 
-  updateDoc 
+  updateDoc,
+  deleteField 
 } from 'firebase/firestore';
 import { db, isLiveFirebaseConfigured } from '../config/firebase';
 import { Submission, Assignment, StudentUser, SubmissionImageMetadata } from '../types';
@@ -24,26 +25,64 @@ export const submissionService = {
     driveLink?: string;
     imageUrls?: string[];
     imagesMetadata?: SubmissionImageMetadata[];
+    verificationCode?: string;
+    verificationCodeCreatedAt?: string;
+    verificationCodeStatus?: 'active' | 'regenerated';
     comment?: string;
   }): Promise<{ submission: Submission | null; error: string | null }> {
-    const { assignment, student, driveLink, imageUrls, imagesMetadata, comment } = params;
+    const { 
+      assignment, 
+      student, 
+      driveLink, 
+      imageUrls, 
+      imagesMetadata, 
+      verificationCode, 
+      verificationCodeCreatedAt,
+      verificationCodeStatus,
+      comment 
+    } = params;
+
+    if (!student?.uid) {
+      return { submission: null, error: 'Student authentication is required.' };
+    }
+
+    // Verify Student belongs to target class / semester & department (Section 15: Submission Authorization)
+    if (student.semester !== assignment.semester) {
+      return { 
+        submission: null, 
+        error: `Unauthorized: You belong to ${student.semester} Semester and cannot submit to this ${assignment.semester} Semester assignment.` 
+      };
+    }
+
+    if (student.department && assignment.department && student.department !== assignment.department) {
+      return {
+        submission: null,
+        error: `Unauthorized: Department mismatch (${student.department} vs ${assignment.department}).`
+      };
+    }
+
+    // Section 25: Check if assignment is closed or archived
+    if (assignment.status === 'closed' || assignment.status === 'archived') {
+      return {
+        submission: null,
+        error: 'This assignment is closed for submissions.'
+      };
+    }
 
     const isCamera = Boolean(imageUrls && imageUrls.length > 0);
-    let cleanLink = driveLink || '';
+    let cleanLink = driveLink?.trim() || '';
+    let legacyDriveLink = cleanLink;
 
-    if (isCamera) {
-      // Camera submission: primary link can point to first page for backward compatibility
-      cleanLink = imageUrls![0];
-    } else {
-      // Legacy Drive submission
-      if (!cleanLink) {
-        return { submission: null, error: 'Please capture at least one assignment page or provide a valid link.' };
-      }
-      const validation = validateDriveUrl(cleanLink);
+    if (!isCamera && !legacyDriveLink) {
+      return { submission: null, error: 'Please capture at least one notebook page with the camera.' };
+    }
+
+    if (!isCamera && legacyDriveLink) {
+      const validation = validateDriveUrl(legacyDriveLink);
       if (!validation.isValid || !validation.normalizedUrl) {
         return { submission: null, error: validation.errorMessage || 'Please enter a valid Google Drive link.' };
       }
-      cleanLink = validation.normalizedUrl;
+      legacyDriveLink = validation.normalizedUrl;
     }
 
     const nowIso = new Date().toISOString();
@@ -67,38 +106,74 @@ export const submissionService = {
           submissionId = existingDoc.id;
           const existingData = existingDoc.data() as Submission;
 
-          const history = existingData.history || [];
-          if (existingData.driveLink || existingData.imageUrls) {
+          // Maintain submission history preserving marks, feedback, status, timestamps, and previous links
+          const history = existingData.history ? [...existingData.history] : [];
+          if (existingData.driveLink || (existingData.imageUrls && existingData.imageUrls.length > 0)) {
             history.push({
               driveLink: existingData.driveLink,
               imageUrls: existingData.imageUrls,
+              verificationCode: existingData.verificationCode,
               submittedAt: existingData.submittedAt,
               comment: existingData.comment,
+              marks: existingData.marks,
+              feedback: existingData.teacherFeedback || existingData.feedback,
+              teacherFeedback: existingData.teacherFeedback || existingData.feedback,
+              status: existingData.status,
+              gradedAt: existingData.checkedAt || existingData.gradedAt,
+              returnedAt: existingData.returnedAt,
+              returnedBy: existingData.returnedBy,
             });
           }
 
           submissionData = {
             ...existingData,
-            driveLink: cleanLink,
-            imageUrls: imageUrls || existingData.imageUrls || (cleanLink ? [cleanLink] : []),
-            imagesMetadata: imagesMetadata || existingData.imagesMetadata || [],
+            imageUrls: isCamera ? imageUrls! : (existingData.imageUrls || []),
+            imagesMetadata: isCamera ? (imagesMetadata || []) : (existingData.imagesMetadata || []),
             submissionType: isCamera ? 'camera' : (existingData.submissionType || 'drive'),
+            verificationCode: existingData.verificationCode || verificationCode, // verificationCode: verificationCode || existingData.verificationCode
+            verificationCodeCreatedAt: existingData.verificationCodeCreatedAt || verificationCodeCreatedAt || nowIso,
+            verificationCodeStatus: existingData.verificationCodeStatus || verificationCodeStatus || 'active',
             comment: comment !== undefined ? comment : (existingData.comment || ''),
             status: 'submitted',
             submittedAt: nowIso,
+            updatedAt: nowIso,
+            marks: null,
+            teacherFeedback: '',
+            feedback: '',
             history,
           };
 
-          await updateDoc(doc(db, 'submissions', submissionId), {
-            driveLink: cleanLink,
-            imageUrls: imageUrls || existingData.imageUrls || (cleanLink ? [cleanLink] : []),
-            imagesMetadata: imagesMetadata || existingData.imagesMetadata || [],
+          // If updating via camera, do not retain active driveLink (it is preserved in history)
+          if (isCamera) {
+            delete (submissionData as any).driveLink;
+          } else if (legacyDriveLink) {
+            submissionData.driveLink = legacyDriveLink;
+          }
+
+          const updatePayload: Record<string, any> = {
+            imageUrls: isCamera ? imageUrls! : (existingData.imageUrls || []),
+            imagesMetadata: isCamera ? (imagesMetadata || []) : (existingData.imagesMetadata || []),
             submissionType: isCamera ? 'camera' : (existingData.submissionType || 'drive'),
+            verificationCode: verificationCode || existingData.verificationCode || null,
+            verificationCodeCreatedAt: existingData.verificationCodeCreatedAt || verificationCodeCreatedAt || nowIso,
+            verificationCodeStatus: existingData.verificationCodeStatus || verificationCodeStatus || 'active',
             comment: comment !== undefined ? comment : (existingData.comment || ''),
             status: 'submitted',
             submittedAt: nowIso,
+            updatedAt: nowIso,
+            marks: null,
+            teacherFeedback: '',
+            feedback: '',
             history,
-          });
+          };
+
+          if (isCamera) {
+            updatePayload.driveLink = deleteField();
+          } else if (legacyDriveLink) {
+            updatePayload.driveLink = legacyDriveLink;
+          }
+
+          await updateDoc(doc(db, 'submissions', submissionId), updatePayload);
         } else {
           // New submission
           submissionId = `sub_${assignment.id}_${student.uid}`;
@@ -109,12 +184,15 @@ export const submissionService = {
             classId: assignment.classId,
             teacherId: assignment.teacherId,
             studentId: student.uid,
+            studentUid: student.uid,
             studentName: student.name,
             studentPIN: student.pin,
-            driveLink: cleanLink,
-            imageUrls: imageUrls || (cleanLink ? [cleanLink] : []),
-            imagesMetadata: imagesMetadata || [],
+            imageUrls: isCamera ? imageUrls! : [],
+            imagesMetadata: isCamera ? (imagesMetadata || []) : [],
             submissionType: isCamera ? 'camera' : 'drive',
+            verificationCode: verificationCode || undefined,
+            verificationCodeCreatedAt: verificationCodeCreatedAt || (verificationCode ? nowIso : undefined),
+            verificationCodeStatus: verificationCode ? (verificationCodeStatus || 'active') : undefined,
             comment: comment || '',
             status: 'submitted',
             marks: null,
@@ -124,10 +202,15 @@ export const submissionService = {
             history: [],
           };
 
+          // Only set driveLink if legacy drive submission (never for camera)
+          if (!isCamera && legacyDriveLink) {
+            submissionData.driveLink = legacyDriveLink;
+          }
+
           await setDoc(doc(db, 'submissions', submissionId), submissionData);
         }
 
-        // Notify teacher
+        // Notify Teacher of submission
         await notificationService.createNotification({
           recipientUid: assignment.teacherId,
           senderUid: student.uid,
@@ -151,26 +234,45 @@ export const submissionService = {
 
       let submissionData: Submission;
       if (existing) {
-        const history = existing.history || [];
-        if (existing.driveLink || existing.imageUrls) {
+        const history = existing.history ? [...existing.history] : [];
+        if (existing.driveLink || (existing.imageUrls && existing.imageUrls.length > 0)) {
           history.push({
             driveLink: existing.driveLink,
             imageUrls: existing.imageUrls,
+            verificationCode: existing.verificationCode,
             submittedAt: existing.submittedAt,
             comment: existing.comment,
+            marks: existing.marks,
+            feedback: existing.teacherFeedback || existing.feedback,
+            teacherFeedback: existing.teacherFeedback || existing.feedback,
+            status: existing.status,
+            gradedAt: existing.checkedAt || existing.gradedAt,
+            returnedAt: existing.returnedAt,
+            returnedBy: existing.returnedBy,
           });
         }
         submissionData = {
           ...existing,
-          driveLink: cleanLink,
-          imageUrls: imageUrls || existing.imageUrls || (cleanLink ? [cleanLink] : []),
-          imagesMetadata: imagesMetadata || existing.imagesMetadata || [],
+          imageUrls: isCamera ? imageUrls! : (existing.imageUrls || []),
+          imagesMetadata: isCamera ? (imagesMetadata || []) : (existing.imagesMetadata || []),
           submissionType: isCamera ? 'camera' : (existing.submissionType || 'drive'),
+          verificationCode: verificationCode || existing.verificationCode,
+          verificationCodeCreatedAt: existing.verificationCodeCreatedAt || verificationCodeCreatedAt || nowIso,
+          verificationCodeStatus: existing.verificationCodeStatus || verificationCodeStatus || 'active',
           comment: comment !== undefined ? comment : (existing.comment || ''),
           status: 'submitted',
           submittedAt: nowIso,
+          updatedAt: nowIso,
+          marks: null,
+          teacherFeedback: '',
+          feedback: '',
           history,
         };
+        if (isCamera) {
+          delete (submissionData as any).driveLink;
+        } else if (legacyDriveLink) {
+          submissionData.driveLink = legacyDriveLink;
+        }
       } else {
         const submissionId = `sub_${assignment.id}_${student.uid}`;
         submissionData = {
@@ -180,25 +282,37 @@ export const submissionService = {
           classId: assignment.classId,
           teacherId: assignment.teacherId,
           studentId: student.uid,
+          studentUid: student.uid,
           studentName: student.name,
           studentPIN: student.pin,
-          driveLink: cleanLink,
-          imageUrls: imageUrls || (cleanLink ? [cleanLink] : []),
-          imagesMetadata: imagesMetadata || [],
+          imageUrls: isCamera ? imageUrls! : [],
+          imagesMetadata: isCamera ? (imagesMetadata || []) : [],
           submissionType: isCamera ? 'camera' : 'drive',
+          verificationCode: verificationCode || undefined,
+          verificationCodeCreatedAt: verificationCodeCreatedAt || (verificationCode ? nowIso : undefined),
+          verificationCodeStatus: verificationCode ? (verificationCodeStatus || 'active') : undefined,
           comment: comment || '',
           status: 'submitted',
           marks: null,
           teacherFeedback: '',
+          feedback: '',
           submittedAt: nowIso,
           checkedAt: null,
+          gradedAt: null,
+          gradedBy: undefined,
+          returnedAt: null,
+          returnedBy: undefined,
+          updatedAt: nowIso,
           history: [],
         };
+        if (!isCamera && legacyDriveLink) {
+          submissionData.driveLink = legacyDriveLink;
+        }
       }
 
       MockStore.saveSubmission(submissionData);
 
-      // Notify teacher in mock
+      // Notify teacher
       await notificationService.createNotification({
         recipientUid: assignment.teacherId,
         senderUid: student.uid,
@@ -214,7 +328,7 @@ export const submissionService = {
   },
 
   /**
-   * Fetch submissions for a specific assignment (for teacher review)
+   * Fetch submissions for a specific assignment
    */
   async getAssignmentSubmissions(assignmentId: string, teacherId?: string): Promise<Submission[]> {
     if (!assignmentId) return [];
@@ -236,6 +350,30 @@ export const submissionService = {
       }
     } else {
       return MockStore.getSubmissions().filter((s) => s.assignmentId === assignmentId);
+    }
+  },
+
+  /**
+   * Fetch all submissions for assignments managed by a Staff member
+   */
+  async getStaffSubmissions(staffId: string): Promise<Submission[]> {
+    if (!staffId) return [];
+
+    if (isLiveFirebaseConfigured) {
+      try {
+        const q = query(collection(db, 'submissions'), where('teacherId', '==', staffId));
+        const snap = await getDocs(q);
+        const list: Submission[] = [];
+        snap.forEach((d) => list.push(d.data() as Submission));
+        return list.sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
+      } catch (err) {
+        console.error('Error fetching staff submissions:', err);
+        return [];
+      }
+    } else {
+      return MockStore.getSubmissions()
+        .filter((s) => s.teacherId === staffId)
+        .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
     }
   },
 
@@ -278,29 +416,39 @@ export const submissionService = {
   }): Promise<{ success: boolean; error: string | null }> {
     const { submission, teacherId, teacherName, marks, maxMarks, feedback, status } = params;
 
-    if (marks < 0 || marks > maxMarks) {
-      return { success: false, error: `Marks must be between 0 and ${maxMarks}.` };
+    if (status === 'checked') {
+      if (marks < 0 || marks > maxMarks) {
+        return { success: false, error: `Marks must be between 0 and ${maxMarks}.` };
+      }
     }
 
     const checkedAt = new Date().toISOString();
+    const isChecked = status === 'checked';
+
+    const updates = {
+      marks: isChecked ? marks : null,
+      teacherFeedback: feedback.trim(),
+      feedback: feedback.trim(),
+      status,
+      checkedAt: isChecked ? checkedAt : null,
+      gradedAt: isChecked ? checkedAt : null,
+      gradedBy: isChecked ? teacherId : undefined,
+      returnedAt: !isChecked ? checkedAt : null,
+      returnedBy: !isChecked ? teacherId : undefined,
+      updatedAt: checkedAt,
+    };
 
     if (isLiveFirebaseConfigured) {
       try {
-        await updateDoc(doc(db, 'submissions', submission.id), {
-          marks: status === 'checked' ? marks : null,
-          teacherFeedback: feedback.trim(),
-          status,
-          checkedAt: status === 'checked' ? checkedAt : null,
-        });
+        await updateDoc(doc(db, 'submissions', submission.id), updates);
 
         // Notify student
-        const isChecked = status === 'checked';
         await notificationService.createNotification({
           recipientUid: submission.studentId,
           senderUid: teacherId,
           senderName: teacherName,
           type: isChecked ? 'submission_graded' : 'submission_returned',
-          title: isChecked ? 'Assignment Evaluated' : 'Resubmission Requested',
+          title: isChecked ? 'Assignment Evaluated' : 'Returned for Correction',
           message: isChecked
             ? `Your assignment "${submission.assignmentTitle}" received ${marks}/${maxMarks} marks. ${feedback ? `Feedback: "${feedback}"` : ''}`
             : `Teacher requested resubmission for "${submission.assignmentTitle}". Note: "${feedback}"`,
@@ -316,21 +464,17 @@ export const submissionService = {
       // Mock fallback
       const updated: Submission = {
         ...submission,
-        marks: status === 'checked' ? marks : null,
-        teacherFeedback: feedback.trim(),
-        status,
-        checkedAt: status === 'checked' ? checkedAt : null,
+        ...updates,
       };
 
       MockStore.saveSubmission(updated);
 
-      const isChecked = status === 'checked';
       await notificationService.createNotification({
         recipientUid: submission.studentId,
         senderUid: teacherId,
         senderName: teacherName,
         type: isChecked ? 'submission_graded' : 'submission_returned',
-        title: isChecked ? 'Assignment Evaluated' : 'Resubmission Requested',
+        title: isChecked ? 'Assignment Evaluated' : 'Returned for Correction',
         message: isChecked
           ? `Your assignment "${submission.assignmentTitle}" received ${marks}/${maxMarks} marks. ${feedback ? `Feedback: "${feedback}"` : ''}`
           : `Teacher requested resubmission for "${submission.assignmentTitle}". Note: "${feedback}"`,

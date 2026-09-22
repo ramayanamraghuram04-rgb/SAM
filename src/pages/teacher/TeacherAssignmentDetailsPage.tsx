@@ -150,7 +150,7 @@ export const TeacherAssignmentDetailsPage: React.FC<TeacherAssignmentDetailsPage
               Student Submissions
             </h2>
             <p className="text-xs text-slate-500">
-              Open Google Drive links to check physical notebook photos and enter marks
+              Review notebook pages and enter marks
             </p>
           </div>
 
@@ -195,7 +195,7 @@ export const TeacherAssignmentDetailsPage: React.FC<TeacherAssignmentDetailsPage
             title="No submissions found"
             description={
               submissions.length === 0
-                ? 'No students have submitted this assignment yet. Submissions will appear as students upload their Google Drive links.'
+                ? 'No students have submitted this assignment yet. Submissions will appear as students submit their assignments.'
                 : 'No submissions match your selected filter.'
             }
           />

@@ -16,10 +16,15 @@ import { StudentLoginPage } from './pages/public/StudentLoginPage';
 import { AdminDashboard } from './pages/admin/AdminDashboard';
 import { AdminStaffPage } from './pages/admin/AdminStaffPage';
 import { AdminStudentsPage } from './pages/admin/AdminStudentsPage';
+import { AdminClassesPage } from './pages/admin/AdminClassesPage';
 import { AdminSubjectsPage } from './pages/admin/AdminSubjectsPage';
 import { AdminTeachingAssignmentsPage } from './pages/admin/AdminTeachingAssignmentsPage';
+import { AdminAssignmentsPage } from './pages/admin/AdminAssignmentsPage';
+import { AdminSubmissionsPage } from './pages/admin/AdminSubmissionsPage';
+import { AdminNotificationsPage } from './pages/admin/AdminNotificationsPage';
 import { AdminOverviewPage } from './pages/admin/AdminOverviewPage';
 import { AdminProfilePage } from './pages/admin/AdminProfilePage';
+import { AdminSettingsPage } from './pages/admin/AdminSettingsPage';
 
 // Staff / Teacher pages
 import { TeacherDashboard } from './pages/teacher/TeacherDashboard';
@@ -27,6 +32,7 @@ import { TeacherClassesPage } from './pages/teacher/TeacherClassesPage';
 import { TeacherClassDetailsPage } from './pages/teacher/TeacherClassDetailsPage';
 import { TeacherAssignmentsPage } from './pages/teacher/TeacherAssignmentsPage';
 import { TeacherAssignmentDetailsPage } from './pages/teacher/TeacherAssignmentDetailsPage';
+import { TeacherSubmissionsPage } from './pages/teacher/TeacherSubmissionsPage';
 import { TeacherNotificationsPage } from './pages/teacher/TeacherNotificationsPage';
 import { TeacherProfilePage } from './pages/teacher/TeacherProfilePage';
 
@@ -141,12 +147,17 @@ export function App() {
           {adminTab === 'home' && (
             <AdminDashboard onNavigateTab={(tab) => setAdminTab(tab)} />
           )}
-          {adminTab === 'staff' && <AdminStaffPage />}
           {adminTab === 'students' && <AdminStudentsPage />}
+          {adminTab === 'staff' && <AdminStaffPage />}
+          {adminTab === 'classes' && <AdminClassesPage />}
           {adminTab === 'subjects' && <AdminSubjectsPage />}
           {adminTab === 'teaching' && <AdminTeachingAssignmentsPage />}
+          {adminTab === 'assignments' && <AdminAssignmentsPage />}
+          {adminTab === 'submissions' && <AdminSubmissionsPage />}
+          {adminTab === 'notifications' && <AdminNotificationsPage />}
           {adminTab === 'overview' && <AdminOverviewPage />}
           {adminTab === 'profile' && <AdminProfilePage />}
+          {adminTab === 'settings' && <AdminSettingsPage />}
         </AppLayout>
       );
     }
@@ -211,6 +222,7 @@ export function App() {
               onSelectAssignment={(asg) => setSelectedStaffAssignment(asg)}
             />
           )}
+          {staffTab === 'submissions' && <TeacherSubmissionsPage />}
           {staffTab === 'notifications' && <TeacherNotificationsPage />}
           {staffTab === 'profile' && <TeacherProfilePage />}
         </AppLayout>

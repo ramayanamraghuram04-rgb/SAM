@@ -89,7 +89,7 @@ export const StudentMarksPage: React.FC = () => {
             <EmptyState
               icon={<Award className="w-8 h-8 text-amber-500" />}
               title="No marks available yet"
-              description="When your teacher checks your physical notebook submissions on Google Drive, your evaluated marks and feedback will be listed here."
+              description="When your teacher checks your physical notebook submissions, your evaluated marks and feedback will be listed here."
             />
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -106,15 +106,16 @@ export const StudentMarksPage: React.FC = () => {
                             <span className="text-xs font-bold text-slate-700">{asg.subject}</span>
                           </div>
                         )}
-                        <h3 className="text-base font-extrabold text-slate-900">
+                        <h4 className="text-base font-extrabold text-slate-900 tracking-tight">
                           {sub.assignmentTitle}
-                        </h3>
+                        </h4>
                       </div>
 
-                      {/* Marks Awarded Pill */}
-                      <div className="flex items-center gap-1.5 bg-emerald-600 text-white font-extrabold text-sm px-3 py-1.5 rounded-xl shadow-xs">
-                        <Award className="w-4 h-4" />
-                        <span>{sub.marks} / {maxMarks}</span>
+                      <div className="text-right">
+                        <span className="text-2xl font-black text-emerald-600">
+                          {sub.marks}
+                        </span>
+                        <span className="text-xs font-bold text-slate-400"> / {maxMarks}</span>
                       </div>
                     </div>
 
@@ -132,15 +133,27 @@ export const StudentMarksPage: React.FC = () => {
                     {/* Footer */}
                     <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-xs text-slate-500">
                       <span>Checked on: {formatDate(sub.checkedAt || sub.submittedAt)}</span>
-                      <a
-                        href={sub.driveLink}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-600 hover:underline inline-flex items-center gap-1 font-medium"
-                      >
-                        <ExternalLink className="w-3 h-3" />
-                        <span>View Drive File</span>
-                      </a>
+                      {sub.imageUrls && sub.imageUrls.length > 0 ? (
+                        <a
+                          href={sub.imageUrls[0]}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-600 hover:underline inline-flex items-center gap-1 font-medium"
+                        >
+                          <ExternalLink className="w-3 h-3" />
+                          <span>View Notebook ({sub.imageUrls.length} Page{sub.imageUrls.length > 1 ? 's' : ''})</span>
+                        </a>
+                      ) : sub.driveLink ? (
+                        <a
+                          href={sub.driveLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-slate-600 hover:underline inline-flex items-center gap-1 font-medium"
+                        >
+                          <ExternalLink className="w-3 h-3" />
+                          <span>View Drive File (Legacy)</span>
+                        </a>
+                      ) : null}
                     </div>
                   </Card>
                 );

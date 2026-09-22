@@ -3,8 +3,8 @@ import { Calendar, Award, ExternalLink, ArrowRight, Clock } from 'lucide-react';
 import { Assignment, Submission } from '../../types';
 import { Card } from '../common/Card';
 import { Button } from '../common/Button';
-import { SemesterBadge, SubmissionStatusBadge } from '../common/Badge';
-import { formatDate, getDaysRemaining } from '../../utils/dateUtils';
+import { SemesterBadge, AssignmentDisplayStatusBadge } from '../common/Badge';
+import { formatDate, getDaysRemaining, getAssignmentDisplayStatus } from '../../utils/dateUtils';
 
 interface AssignmentCardProps {
   assignment: Assignment;
@@ -19,7 +19,7 @@ export const AssignmentCard: React.FC<AssignmentCardProps> = ({
   onSubmitClick,
   onViewClick,
 }) => {
-  const status = submission?.status || 'not_submitted';
+  const displayStatus = getAssignmentDisplayStatus(assignment, submission);
   const deadline = getDaysRemaining(assignment.dueDate);
 
   return (
@@ -36,7 +36,7 @@ export const AssignmentCard: React.FC<AssignmentCardProps> = ({
           </h3>
         </div>
 
-        <SubmissionStatusBadge status={status} />
+        <AssignmentDisplayStatusBadge displayStatus={displayStatus} />
       </div>
 
       {/* Description preview */}
@@ -104,15 +104,15 @@ export const AssignmentCard: React.FC<AssignmentCardProps> = ({
           )}
 
           <Button
-            variant={status === 'not_submitted' || status === 'returned' ? 'primary' : 'outline'}
+            variant={displayStatus === 'RETURNED' || displayStatus === 'NEW' || displayStatus === 'PENDING' || displayStatus === 'OVERDUE' ? 'primary' : 'outline'}
             size="sm"
             onClick={() => onSubmitClick(assignment, submission)}
           >
-            {status === 'not_submitted'
-              ? 'Submit Assignment'
-              : status === 'returned'
+            {displayStatus === 'RETURNED'
               ? 'Resubmit'
-              : 'View / Edit Link'}
+              : displayStatus === 'SUBMITTED' || displayStatus === 'GRADED'
+              ? 'View Submission'
+              : 'Submit Assignment'}
           </Button>
         </div>
       </div>

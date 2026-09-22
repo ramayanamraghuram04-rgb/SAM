@@ -89,3 +89,36 @@ export function getDaysRemaining(dueDateStr: string): { text: string; isOverdue:
     return { text: '', isOverdue: false, isUrgent: false };
   }
 }
+
+export type AssignmentDisplayStatus = 'NEW' | 'PENDING' | 'SUBMITTED' | 'RETURNED' | 'GRADED' | 'OVERDUE';
+
+/**
+ * Resolve display status for student assignment cards according to Step 11 requirements:
+ * NEW, PENDING, SUBMITTED, RETURNED, GRADED, OVERDUE
+ */
+export function getAssignmentDisplayStatus(
+  assignment: { dueDate: string; createdAt: string },
+  submission?: { status: string } | null
+): AssignmentDisplayStatus {
+  if (submission) {
+    if (submission.status === 'checked') return 'GRADED';
+    if (submission.status === 'returned') return 'RETURNED';
+    if (submission.status === 'submitted' || submission.status === 'under_review') return 'SUBMITTED';
+  }
+
+  const deadline = getDaysRemaining(assignment.dueDate);
+  if (deadline.isOverdue) return 'OVERDUE';
+
+  // Check if created recently within the last 3 days
+  try {
+    const createdTime = new Date(assignment.createdAt).getTime();
+    if (!isNaN(createdTime)) {
+      const threeDaysAgo = Date.now() - 3 * 24 * 60 * 60 * 1000;
+      if (createdTime > threeDaysAgo) return 'NEW';
+    }
+  } catch {
+    // ignore
+  }
+
+  return 'PENDING';
+}

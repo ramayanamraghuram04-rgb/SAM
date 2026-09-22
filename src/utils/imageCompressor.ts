@@ -15,15 +15,120 @@ export interface CompressedImageResult {
   height: number;
 }
 
+export interface WatermarkOptions {
+  studentName?: string;
+  studentPIN?: string;
+  verificationCode?: string;
+  timestamp?: string;
+}
+
 const MAX_DIMENSION = 1600;
 const TARGET_SIZE_BYTES = 150 * 1024; // ~150 KB
 const MIN_QUALITY = 0.55; // Never compress below 0.55 to preserve handwriting sharpness
 const INITIAL_QUALITY = 0.78;
 
 /**
- * Captures the current frame from an HTML5 Video element and draws it to an optimized off-screen canvas.
+ * Renders a compact, high-contrast watermark badge in a safe corner of the canvas.
+ * Does not obscure handwriting in notebook margins.
  */
-export function captureFrameFromVideo(video: HTMLVideoElement): HTMLCanvasElement {
+export function drawVerificationWatermark(
+  canvas: HTMLCanvasElement,
+  options?: WatermarkOptions
+): void {
+  if (!options) return;
+  const { studentName, studentPIN, verificationCode, timestamp } = options;
+  if (!studentName && !studentPIN && !verificationCode) return;
+
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+
+  const lines: string[] = [];
+  if (studentName) lines.push(studentName);
+  if (studentPIN) lines.push(`PIN: ${studentPIN}`);
+  if (verificationCode) lines.push(`Code: ${verificationCode}`);
+
+  const formattedTime = timestamp || new Date().toLocaleString('en-IN', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true,
+  });
+  lines.push(formattedTime);
+
+  // Dynamic responsive font size based on canvas width (approx 11-14px)
+  const fontSize = Math.max(11, Math.min(14, Math.round(canvas.width * 0.01)));
+  const lineHeight = fontSize * 1.35;
+  const paddingX = Math.round(fontSize * 0.85);
+  const paddingY = Math.round(fontSize * 0.65);
+
+  ctx.save();
+  ctx.font = `600 ${fontSize}px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif`;
+
+  let maxTextWidth = 0;
+  for (const line of lines) {
+    const w = ctx.measureText(line).width;
+    if (w > maxTextWidth) maxTextWidth = w;
+  }
+
+  const badgeWidth = maxTextWidth + paddingX * 2;
+  const badgeHeight = lines.length * lineHeight + paddingY * 2;
+
+  // Safe bottom-right corner positioning with subtle margin
+  const margin = Math.round(fontSize * 1.2);
+  const x = Math.max(0, canvas.width - badgeWidth - margin);
+  const y = Math.max(0, canvas.height - badgeHeight - margin);
+
+  // Background pill with translucent dark background for maximum readability
+  ctx.fillStyle = 'rgba(15, 23, 42, 0.78)';
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.16)';
+  ctx.lineWidth = 1;
+
+  const radius = 6;
+  ctx.beginPath();
+  ctx.moveTo(x + radius, y);
+  ctx.lineTo(x + badgeWidth - radius, y);
+  ctx.quadraticCurveTo(x + badgeWidth, y, x + badgeWidth, y + radius);
+  ctx.lineTo(x + badgeWidth, y + badgeHeight - radius);
+  ctx.quadraticCurveTo(x + badgeWidth, y + badgeHeight, x + badgeWidth - radius, y + badgeHeight);
+  ctx.lineTo(x + radius, y + badgeHeight);
+  ctx.quadraticCurveTo(x, y + badgeHeight, x, y + badgeHeight - radius);
+  ctx.lineTo(x, y + radius);
+  ctx.quadraticCurveTo(x, y, x + radius, y);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  // Render text lines
+  let textY = y + paddingY + fontSize * 0.88;
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (line.startsWith('Code:')) {
+      ctx.fillStyle = '#38bdf8'; // Sky blue for verification code
+      ctx.font = `bold ${fontSize}px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace`;
+    } else if (i === 0) {
+      ctx.fillStyle = '#ffffff'; // Crisp white for student name
+      ctx.font = `600 ${fontSize}px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif`;
+    } else {
+      ctx.fillStyle = '#cbd5e1'; // Slate 300 for PIN and timestamp
+      ctx.font = `500 ${Math.round(fontSize * 0.92)}px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif`;
+    }
+    ctx.fillText(line, x + paddingX, textY);
+    textY += lineHeight;
+  }
+
+  ctx.restore();
+}
+
+/**
+ * Captures the current frame from an HTML5 Video element and draws it to an optimized off-screen canvas.
+ * Optionally applies a corner verification watermark badge.
+ */
+export function captureFrameFromVideo(
+  video: HTMLVideoElement,
+  watermark?: WatermarkOptions
+): HTMLCanvasElement {
   const naturalWidth = video.videoWidth || 1280;
   const naturalHeight = video.videoHeight || 720;
 
@@ -54,6 +159,11 @@ export function captureFrameFromVideo(video: HTMLVideoElement): HTMLCanvasElemen
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = 'high';
   ctx.drawImage(video, 0, 0, targetWidth, targetHeight);
+
+  // Apply watermark if options are provided
+  if (watermark) {
+    drawVerificationWatermark(canvas, watermark);
+  }
 
   return canvas;
 }
@@ -105,9 +215,12 @@ export async function compressCanvasToBlob(canvas: HTMLCanvasElement): Promise<C
 }
 
 /**
- * One-step capture from video element and compression to target ~150 KB Blob.
+ * One-step capture from video element, watermark rendering, and compression to target ~150 KB Blob.
  */
-export async function captureAndCompressFromVideo(video: HTMLVideoElement): Promise<CompressedImageResult> {
-  const canvas = captureFrameFromVideo(video);
+export async function captureAndCompressFromVideo(
+  video: HTMLVideoElement,
+  watermark?: WatermarkOptions
+): Promise<CompressedImageResult> {
+  const canvas = captureFrameFromVideo(video, watermark);
   return compressCanvasToBlob(canvas);
 }

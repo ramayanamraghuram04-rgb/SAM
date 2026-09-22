@@ -8,7 +8,8 @@ import {
   Award, 
   Users, 
   Bookmark, 
-  Shield 
+  Shield,
+  GraduationCap
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useNotifications } from '../../context/NotificationContext';
@@ -24,9 +25,9 @@ export const BottomNav: React.FC<BottomNavProps> = ({ currentTab, onSelectTab })
 
   const adminItems = [
     { id: 'home', label: 'Home', icon: <Home className="w-5 h-5" /> },
-    { id: 'staff', label: 'Staff', icon: <User className="w-5 h-5" /> },
     { id: 'students', label: 'Students', icon: <Users className="w-5 h-5" /> },
-    { id: 'teaching', label: 'Classes', icon: <Layers className="w-5 h-5" /> },
+    { id: 'staff', label: 'Staff', icon: <GraduationCap className="w-5 h-5" /> },
+    { id: 'classes', label: 'Classes', icon: <Layers className="w-5 h-5" /> },
     { id: 'profile', label: 'Admin', icon: <Shield className="w-5 h-5" /> },
   ];
 
@@ -34,7 +35,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({ currentTab, onSelectTab })
     { id: 'home', label: 'Home', icon: <Home className="w-5 h-5" /> },
     { id: 'classes', label: 'Classes', icon: <Layers className="w-5 h-5" /> },
     { id: 'assignments', label: 'Assignments', icon: <FileText className="w-5 h-5" /> },
-    { id: 'notifications', label: 'Alerts', icon: <Bell className="w-5 h-5" />, badge: unreadCount },
+    { id: 'submissions', label: 'Submissions', icon: <Award className="w-5 h-5" /> },
     { id: 'profile', label: 'Profile', icon: <User className="w-5 h-5" /> },
   ];
 

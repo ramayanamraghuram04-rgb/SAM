@@ -14,7 +14,9 @@ export interface BaseUser {
   name: string;
   department: Department;
   status: UserStatus;
+  active?: boolean;
   createdAt: string;
+  updatedAt?: string;
 }
 
 export interface AdminUser extends BaseUser {
@@ -36,6 +38,7 @@ export interface StudentUser extends BaseUser {
   role: 'student';
   pin: string; // Diploma PIN, e.g., "24170-CM-001"
   semester: Semester; // 1st, 3rd, 4th, 5th
+  classId?: string;
 }
 
 export type AppUser = AdminUser | StaffUser | StudentUser;
@@ -47,10 +50,13 @@ export interface Subject {
   code?: string;
   semester: Semester;
   department: Department;
+  status?: 'active' | 'disabled';
+  active?: boolean;
   createdAt: string;
+  updatedAt?: string;
 }
 
-// Staff Teaching Assignment (Admin assigns Staff -> Semester + Subject)
+// Staff Teaching Assignment (Admin assigns Staff -> Semester + Subject + Class)
 export interface TeachingAssignment {
   id: string;
   staffId: string;
@@ -59,19 +65,26 @@ export interface TeachingAssignment {
   semester: Semester;
   subjectId: string;
   subjectName: string;
+  classId?: string;
   department: Department;
+  active?: boolean;
   createdAt: string;
+  updatedAt?: string;
 }
 
 export interface ClassItem {
   id: string;
+  name?: string;
   teacherId: string;
   teacherName: string;
   department: Department;
   semester: Semester;
   subject: string;
-  status: 'active' | 'archived';
+  academicYear?: string;
+  status: 'active' | 'archived' | 'disabled';
+  active?: boolean;
   createdAt: string;
+  updatedAt?: string;
   studentCount?: number;
   assignmentCount?: number;
 }
@@ -105,19 +118,27 @@ export interface Invitation {
   createdAt: string;
 }
 
+export type AssignmentStatus = 'active' | 'closed' | 'draft' | 'published' | 'archived';
+
 export interface Assignment {
   id: string;
   classId: string;
-  teacherId: string;
+  teacherId: string; // Authenticated Staff Firebase UID (for backward compatibility)
+  staffId?: string;   // Authenticated Staff Firebase UID
   teacherName?: string;
   semester: Semester;
+  department?: Department;
+  subjectId?: string;
   subject: string;
   title: string;
   description: string; // Notebook question prompt
+  instructions?: string; // Additional notebook instructions
   dueDate: string; // YYYY-MM-DD or ISO
   maxMarks: number; // default 10
-  status: 'active' | 'closed';
+  status: AssignmentStatus;
+  published?: boolean; // true if published to students, false if draft
   createdAt: string;
+  updatedAt?: string;
 }
 
 export type SubmissionStatus = 'not_submitted' | 'submitted' | 'under_review' | 'checked' | 'returned';
@@ -131,11 +152,33 @@ export interface SubmissionImageMetadata {
   format?: string;
 }
 
+export interface VerificationCodeRecord {
+  id: string; // `vcode_${assignmentId}_${studentId}`
+  assignmentId: string;
+  studentId: string;
+  studentPIN: string;
+  studentName: string;
+  code: string;
+  createdAt: string;
+  updatedAt?: string;
+  regeneratedAt?: string;
+  regeneratedBy?: string;
+  active: boolean;
+}
+
 export interface SubmissionHistoryItem {
   driveLink?: string;
   imageUrls?: string[];
+  verificationCode?: string;
   submittedAt: string;
   comment?: string;
+  marks?: number | null;
+  feedback?: string;
+  teacherFeedback?: string;
+  status?: string;
+  gradedAt?: string | null;
+  returnedAt?: string | null;
+  returnedBy?: string;
 }
 
 export interface Submission {
@@ -145,18 +188,28 @@ export interface Submission {
   classId: string;
   teacherId: string;
   studentId: string;
+  studentUid?: string;
   studentName: string;
   studentPIN: string;
   driveLink?: string; // Google Drive sharing URL (maintained for backward compatibility)
   imageUrls?: string[]; // Array of Cloudinary secure_urls for camera captures
   imagesMetadata?: SubmissionImageMetadata[]; // Cloudinary image metadata
   submissionType?: 'camera' | 'drive';
+  verificationCode?: string;
+  verificationCodeCreatedAt?: string;
+  verificationCodeStatus?: 'active' | 'regenerated';
   comment?: string;
   status: SubmissionStatus;
   marks: number | null; // 0 to maxMarks (10)
   teacherFeedback?: string;
+  feedback?: string; // Alias for teacherFeedback
   submittedAt: string;
   checkedAt?: string | null;
+  gradedAt?: string | null; // Alias for checkedAt
+  gradedBy?: string; // Authenticated Staff UID
+  returnedAt?: string | null;
+  returnedBy?: string; // Authenticated Staff UID
+  updatedAt?: string;
   history?: SubmissionHistoryItem[];
 }
 
@@ -168,7 +221,8 @@ export type NotificationType =
   | 'submission_graded' 
   | 'submission_returned'
   | 'account_status'
-  | 'system';
+  | 'system'
+  | 'announcement';
 
 export interface AppNotification {
   id: string;

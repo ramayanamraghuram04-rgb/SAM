@@ -109,7 +109,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
             Hello, {user?.name}
           </h1>
           <p className="text-xs sm:text-sm text-indigo-100/90 mt-1 max-w-lg">
-            Complete your notebook questions, upload photos to Google Drive, and submit links for evaluation.
+            Complete your notebook questions, capture photos of your handwritten pages with the camera, and submit for evaluation.
           </p>
         </div>
 
@@ -259,7 +259,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
 
         {assignments.length === 0 ? (
           <p className="text-xs text-slate-400 italic p-5 bg-white rounded-2xl border border-slate-200/80 text-center">
-            No assignments assigned yet. Once your teachers publish questions in your enrolled classes, they will appear here.
+            No assignments yet. Once your faculty publishes assignments for your class, they will appear here.
           </p>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

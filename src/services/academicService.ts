@@ -167,9 +167,9 @@ export const academicService = {
    */
   async updateSubject(
     subjectId: string, 
-    params: { name: string; semester: Semester; code?: string }
+    params: { name: string; semester: Semester; code?: string; status?: 'active' | 'disabled' }
   ): Promise<{ subject: Subject | null; error: string | null }> {
-    const { name, semester, code } = params;
+    const { name, semester, code, status } = params;
     const cleanName = (name || '').trim();
 
     if (!cleanName) {
@@ -186,6 +186,9 @@ export const academicService = {
       ...existing,
       name: cleanName,
       semester,
+      status: status || existing.status || 'active',
+      active: (status || existing.status || 'active') === 'active',
+      updatedAt: new Date().toISOString(),
     };
     if (code && code.trim()) {
       updated.code = code.trim();
@@ -211,6 +214,22 @@ export const academicService = {
     } else {
       return { subject: updated, error: null };
     }
+  },
+
+  /**
+   * Toggle subject status (active/disabled)
+   */
+  async toggleSubjectStatus(subjectId: string, status: 'active' | 'disabled'): Promise<{ success: boolean; error: string | null }> {
+    const all = await this.getAllSubjects();
+    const existing = all.find(s => s.id === subjectId);
+    if (!existing) return { success: false, error: 'Subject not found.' };
+
+    return this.updateSubject(subjectId, {
+      name: existing.name,
+      semester: existing.semester,
+      code: existing.code,
+      status,
+    }).then(res => ({ success: !res.error, error: res.error }));
   },
 
   /**
@@ -475,5 +494,224 @@ export const academicService = {
     }
 
     return allClasses;
+  },
+
+  /**
+   * Seed default academic classes for CSE semesters if not already seeded
+   */
+  async seedDefaultClasses(): Promise<void> {
+    const existing = await this.getAllClasses();
+    if (existing.length > 0) return;
+
+    const defaults: Array<{ name: string; semester: Semester; academicYear: string }> = [
+      { name: '1st Semester CSE', semester: '1st', academicYear: '2026-2027' },
+      { name: '3rd Semester CSE', semester: '3rd', academicYear: '2025-2026' },
+      { name: '4th Semester CSE', semester: '4th', academicYear: '2025-2026' },
+      { name: '5th Semester CSE', semester: '5th', academicYear: '2024-2025' },
+    ];
+
+    for (const d of defaults) {
+      await this.createClass(d);
+    }
+  },
+
+  /**
+   * Get all registered classes in the department
+   */
+  async getAllClasses(): Promise<ClassItem[]> {
+    let classes: ClassItem[] = [];
+    if (isLiveFirebaseConfigured) {
+      try {
+        const snap = await getDocs(collection(db, 'classes'));
+        snap.forEach((d) => classes.push(d.data() as ClassItem));
+        if (classes.length > 0) {
+          return classes.sort((a, b) => a.semester.localeCompare(b.semester));
+        }
+      } catch (err) {
+        console.warn('Live classes fetch note:', err);
+      }
+    }
+    // Fallback or mock
+    classes = MockStore.getClasses();
+    if (classes.length === 0) {
+      const defaults: ClassItem[] = [
+        {
+          id: 'cls_1st_sem_cse',
+          name: '1st Semester CSE',
+          teacherId: 'admin',
+          teacherName: 'Admin',
+          department: DEPARTMENT,
+          semester: '1st',
+          subject: 'Core Engineering',
+          academicYear: '2026-2027',
+          status: 'active',
+          active: true,
+          createdAt: new Date().toISOString(),
+          studentCount: 0,
+          assignmentCount: 0,
+        },
+        {
+          id: 'cls_3rd_sem_cse',
+          name: '3rd Semester CSE',
+          teacherId: 'admin',
+          teacherName: 'Admin',
+          department: DEPARTMENT,
+          semester: '3rd',
+          subject: 'Computer Science',
+          academicYear: '2025-2026',
+          status: 'active',
+          active: true,
+          createdAt: new Date().toISOString(),
+          studentCount: 0,
+          assignmentCount: 0,
+        },
+        {
+          id: 'cls_4th_sem_cse',
+          name: '4th Semester CSE',
+          teacherId: 'admin',
+          teacherName: 'Admin',
+          department: DEPARTMENT,
+          semester: '4th',
+          subject: 'Computer Science',
+          academicYear: '2025-2026',
+          status: 'active',
+          active: true,
+          createdAt: new Date().toISOString(),
+          studentCount: 0,
+          assignmentCount: 0,
+        },
+        {
+          id: 'cls_5th_sem_cse',
+          name: '5th Semester CSE',
+          teacherId: 'admin',
+          teacherName: 'Admin',
+          department: DEPARTMENT,
+          semester: '5th',
+          subject: 'Advanced Computing',
+          academicYear: '2024-2025',
+          status: 'active',
+          active: true,
+          createdAt: new Date().toISOString(),
+          studentCount: 0,
+          assignmentCount: 0,
+        },
+      ];
+      defaults.forEach((c) => MockStore.saveClass(c));
+      return defaults;
+    }
+    return classes.sort((a, b) => a.semester.localeCompare(b.semester));
+  },
+
+  /**
+   * Create a new class
+   */
+  async createClass(params: {
+    name: string;
+    semester: Semester;
+    academicYear?: string;
+    teacherId?: string;
+    teacherName?: string;
+    subject?: string;
+  }): Promise<{ classItem: ClassItem | null; error: string | null }> {
+    const { name, semester, academicYear = '2026-2027', teacherId = 'admin', teacherName = 'Admin', subject = 'CSE' } = params;
+    const cleanName = (name || '').trim();
+    if (!cleanName) {
+      return { classItem: null, error: 'Class name is required.' };
+    }
+
+    const classId = `class_${semester.toLowerCase()}_${cleanName.toLowerCase().replace(/[^a-z0-9]/g, '_').slice(0, 16)}_${Date.now() % 10000}`;
+    const newClass: ClassItem = {
+      id: classId,
+      name: cleanName,
+      teacherId,
+      teacherName,
+      department: DEPARTMENT,
+      semester,
+      subject,
+      academicYear,
+      status: 'active',
+      active: true,
+      createdAt: new Date().toISOString(),
+      studentCount: 0,
+      assignmentCount: 0,
+    };
+
+    MockStore.saveClass(newClass);
+
+    if (isLiveFirebaseConfigured) {
+      try {
+        await setDoc(doc(db, 'classes', classId), cleanFirestoreData(newClass));
+        return { classItem: newClass, error: null };
+      } catch (err: any) {
+        console.warn('Class saved locally:', err.message);
+        return { classItem: newClass, error: null };
+      }
+    } else {
+      return { classItem: newClass, error: null };
+    }
+  },
+
+  /**
+   * Update an existing class
+   */
+  async updateClass(
+    classId: string,
+    params: Partial<ClassItem>
+  ): Promise<{ classItem: ClassItem | null; error: string | null }> {
+    const classes = await this.getAllClasses();
+    const existing = classes.find((c) => c.id === classId);
+    if (!existing) {
+      return { classItem: null, error: 'Class not found.' };
+    }
+
+    const updated: ClassItem = {
+      ...existing,
+      ...params,
+      updatedAt: new Date().toISOString(),
+    };
+
+    MockStore.saveClass(updated);
+
+    if (isLiveFirebaseConfigured) {
+      try {
+        await setDoc(doc(db, 'classes', classId), cleanFirestoreData(updated));
+        return { classItem: updated, error: null };
+      } catch (err: any) {
+        console.warn('Class updated locally:', err.message);
+        return { classItem: updated, error: null };
+      }
+    } else {
+      return { classItem: updated, error: null };
+    }
+  },
+
+  /**
+   * Toggle class status (active/disabled/archived)
+   */
+  async toggleClassStatus(
+    classId: string,
+    status: 'active' | 'archived' | 'disabled'
+  ): Promise<{ success: boolean; error: string | null }> {
+    const res = await this.updateClass(classId, { status, active: status === 'active' });
+    return { success: !res.error, error: res.error };
+  },
+
+  /**
+   * Delete a class
+   */
+  async deleteClass(classId: string): Promise<{ success: boolean; error: string | null }> {
+    MockStore.deleteClass(classId);
+
+    if (isLiveFirebaseConfigured) {
+      try {
+        await deleteDoc(doc(db, 'classes', classId));
+        return { success: true, error: null };
+      } catch (err: any) {
+        console.warn('Class deleted locally:', err.message);
+        return { success: true, error: null };
+      }
+    } else {
+      return { success: true, error: null };
+    }
   },
 };

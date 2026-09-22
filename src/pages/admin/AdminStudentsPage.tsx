@@ -27,6 +27,7 @@ export const AdminStudentsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [students, setStudents] = useState<StudentUser[]>([]);
   const [selectedSemester, setSelectedSemester] = useState<string>('all');
+  const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
   // Create Modal State
@@ -185,10 +186,11 @@ export const AdminStudentsPage: React.FC = () => {
 
   const filteredStudents = students.filter((s) => {
     const matchesSem = selectedSemester === 'all' || s.semester === selectedSemester;
+    const matchesStatus = selectedStatus === 'all' || s.status === selectedStatus;
     const matchesSearch = 
       s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       s.pin.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesSem && matchesSearch;
+    return matchesSem && matchesStatus && matchesSearch;
   });
 
   if (loading) {
@@ -233,6 +235,23 @@ export const AdminStudentsPage: React.FC = () => {
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-9 pr-4 py-2 text-sm bg-slate-50 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
+          </div>
+
+          {/* Status Filter */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+            {['all', 'active', 'disabled'].map((st) => (
+              <button
+                key={st}
+                onClick={() => setSelectedStatus(st)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap capitalize transition-colors ${
+                  selectedStatus === st
+                    ? 'bg-slate-900 text-white shadow-sm'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+              >
+                {st === 'all' ? 'All Status' : st}
+              </button>
+            ))}
           </div>
 
           {/* Semester Filter */}

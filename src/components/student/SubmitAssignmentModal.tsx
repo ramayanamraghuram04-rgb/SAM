@@ -13,7 +13,10 @@ import {
   RefreshCw,
   UploadCloud,
   FileCheck2,
-  Sparkles
+  Sparkles,
+  Lock,
+  KeyRound,
+  ShieldCheck
 } from 'lucide-react';
 import { Modal } from '../common/Modal';
 import { Button } from '../common/Button';
@@ -21,8 +24,9 @@ import { Assignment, Submission, SubmissionImageMetadata } from '../../types';
 import { submissionService } from '../../services/submissionService';
 import { cloudinaryService, CloudinaryUploadError } from '../../services/cloudinary';
 import { captureAndCompressFromVideo, CompressedImageResult } from '../../utils/imageCompressor';
+import { verificationCodeService } from '../../services/verificationCodeService';
 import { useAuth } from '../../context/AuthContext';
-import { formatDate } from '../../utils/dateUtils';
+import { formatDate, formatDateTime } from '../../utils/dateUtils';
 
 interface CapturedPage {
   id: string;
@@ -41,7 +45,7 @@ interface SubmitAssignmentModalProps {
   onSubmitted: (submission: Submission) => void;
 }
 
-type ModalView = 'camera' | 'page_preview' | 'review' | 'uploading';
+type ModalView = 'verification_code' | 'camera' | 'page_preview' | 'review' | 'uploading' | 'success';
 
 export const SubmitAssignmentModal: React.FC<SubmitAssignmentModalProps> = ({
   isOpen,
@@ -52,13 +56,20 @@ export const SubmitAssignmentModal: React.FC<SubmitAssignmentModalProps> = ({
 }) => {
   const { studentUser } = useAuth();
 
+  // Verification code states
+  const [view, setView] = useState<ModalView>('verification_code');
+  const [verificationCode, setVerificationCode] = useState<string>('');
+  const [codeCreatedAt, setCodeCreatedAt] = useState<string>('');
+  const [isCodeLoading, setIsCodeLoading] = useState<boolean>(true);
+  const [codeError, setCodeError] = useState<string | null>(null);
+
   // State management
-  const [view, setView] = useState<ModalView>('camera');
   const [capturedPages, setCapturedPages] = useState<CapturedPage[]>([]);
   const [currentPendingPage, setCurrentPendingPage] = useState<CapturedPage | null>(null);
   const [activeReviewIndex, setActiveReviewIndex] = useState<number>(0);
   const [comment, setComment] = useState<string>(existingSubmission?.comment || '');
   const [isConfirmed, setIsConfirmed] = useState<boolean>(false);
+  const [createdSubmission, setCreatedSubmission] = useState<Submission | null>(null);
 
   // Camera stream & hardware states
   const [isCameraStarting, setIsCameraStarting] = useState<boolean>(false);
@@ -143,7 +154,7 @@ export const SubmitAssignmentModal: React.FC<SubmitAssignmentModalProps> = ({
       console.error('Camera access error:', err);
       if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
         setCameraError(
-          'Camera permission was denied. Please allow camera permissions in your browser or phone settings so you can photograph your notebook pages.'
+          'Camera permission is required to capture your assignment.'
         );
       } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
         setCameraError('No camera device was detected on your device.');
@@ -159,7 +170,40 @@ export const SubmitAssignmentModal: React.FC<SubmitAssignmentModalProps> = ({
     }
   }, [facingMode, stopCameraStream]);
 
+  // Fetch or generate authoritative verification code on modal open
+  const fetchOrCreateCode = useCallback(async () => {
+    if (!studentUser) return;
+    setIsCodeLoading(true);
+    setCodeError(null);
+
+    try {
+      const res = await verificationCodeService.getOrCreateVerificationCode({
+        assignmentId: assignment.id,
+        studentId: studentUser.uid,
+        studentPIN: studentUser.pin,
+        studentName: studentUser.name,
+      });
+      setVerificationCode(res.code);
+      setCodeCreatedAt(res.createdAt);
+    } catch (err: any) {
+      console.error('Error in fetchOrCreateCode:', err);
+      setCodeError('Unable to generate or retrieve verification code. Please check your network and retry.');
+    } finally {
+      setIsCodeLoading(false);
+    }
+  }, [assignment.id, studentUser]);
+
   // When modal opens/closes or view changes to/from camera
+  useEffect(() => {
+    if (isOpen) {
+      // Start in verification_code view if no captured pages are pending
+      if (capturedPages.length === 0 && !currentPendingPage) {
+        setView('verification_code');
+      }
+      fetchOrCreateCode();
+    }
+  }, [isOpen, fetchOrCreateCode]);
+
   useEffect(() => {
     if (isOpen && view === 'camera') {
       startCameraStream();
@@ -179,13 +223,20 @@ export const SubmitAssignmentModal: React.FC<SubmitAssignmentModalProps> = ({
   };
 
   /**
-   * Capture current frame from camera and compress to ~150 KB
+   * Capture current frame from camera and compress to ~150 KB with watermark
    */
   const handleCaptureFrame = async () => {
     if (!videoRef.current || isCameraStarting) return;
 
     try {
-      const compressed: CompressedImageResult = await captureAndCompressFromVideo(videoRef.current);
+      const compressed: CompressedImageResult = await captureAndCompressFromVideo(
+        videoRef.current,
+        {
+          studentName: studentUser?.name,
+          studentPIN: studentUser?.pin,
+          verificationCode: verificationCode || undefined,
+        }
+      );
       const newPage: CapturedPage = {
         id: `page_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
         blob: compressed.blob,
@@ -311,12 +362,15 @@ export const SubmitAssignmentModal: React.FC<SubmitAssignmentModalProps> = ({
         });
       }
 
-      // Save to Firestore with Cloudinary secure URLs and metadata
+      // Save to Firestore with Cloudinary secure URLs, metadata, and verification code
       const res = await submissionService.submitAssignment({
         assignment,
         student: studentUser,
         imageUrls: uploadedUrls,
         imagesMetadata: uploadedMetadata,
+        verificationCode: verificationCode || undefined,
+        verificationCodeCreatedAt: codeCreatedAt || undefined,
+        verificationCodeStatus: 'active',
         comment: comment.trim(),
       });
 
@@ -324,16 +378,16 @@ export const SubmitAssignmentModal: React.FC<SubmitAssignmentModalProps> = ({
         throw new Error(res.error || 'Failed to save submission record in Firestore.');
       }
 
-      // Success: notify parent and close
-      onSubmitted(res.submission);
-      handleModalClose();
+      // Success: show professional submission confirmation screen
+      setCreatedSubmission(res.submission);
+      setView('success');
     } catch (err: any) {
       console.error('Submission upload error:', err);
-      let errMsg = 'Failed to upload assignment pages.';
+      let errMsg = 'Upload failed. Please retry.';
       if (err instanceof CloudinaryUploadError) {
-        errMsg = `Cloudinary Upload Error: ${err.message}`;
+        errMsg = `Upload failed: ${err.message}. Please retry.`;
       } else if (err.message) {
-        errMsg = err.message;
+        errMsg = `Upload failed: ${err.message}. Please retry.`;
       }
       setUploadError(errMsg);
     }
@@ -358,6 +412,113 @@ export const SubmitAssignmentModal: React.FC<SubmitAssignmentModalProps> = ({
             {assignment.maxMarks} Marks
           </span>
         </div>
+
+        {/* =================================================================== */}
+        {/* VIEW 0: ASSIGNMENT VERIFICATION CODE SCREEN */}
+        {/* =================================================================== */}
+        {view === 'verification_code' && (
+          <div className="py-2 px-1 space-y-5">
+            <div className="text-center space-y-1.5">
+              <div className="w-12 h-12 rounded-2xl bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center mx-auto shadow-xs">
+                <Lock className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-lg font-extrabold text-slate-900 flex items-center justify-center gap-1.5">
+                  <span aria-hidden="true">🔐</span> Assignment Verification
+                </h3>
+                <p className="text-xs text-slate-500 font-semibold mt-0.5">
+                  Your unique code
+                </p>
+              </div>
+            </div>
+
+            {isCodeLoading ? (
+              <div className="py-10 flex flex-col items-center justify-center space-y-3">
+                <RefreshCw className="w-6 h-6 text-blue-600 animate-spin" />
+                <p className="text-xs text-slate-500 font-medium">
+                  Retrieving your secure verification code...
+                </p>
+              </div>
+            ) : codeError ? (
+              <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 text-center space-y-3">
+                <AlertCircle className="w-5 h-5 text-rose-600 mx-auto" />
+                <p className="text-xs text-rose-700 font-medium">{codeError}</p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={fetchOrCreateCode}
+                  leftIcon={<RefreshCw className="w-3.5 h-3.5" />}
+                >
+                  Retry Loading Code
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {/* Clean, High-Contrast Verification Code Badge */}
+                <div className="p-5 rounded-2xl bg-gradient-to-b from-blue-50/70 to-indigo-50/40 border-2 border-dashed border-blue-300 text-center space-y-2 shadow-xs">
+                  <span className="inline-block text-[11px] font-bold text-blue-700 uppercase tracking-wider bg-blue-100/90 px-3 py-0.5 rounded-full">
+                    YOUR ASSIGNMENT VERIFICATION CODE
+                  </span>
+                  <div
+                    id="verification-code-display"
+                    className="text-4xl sm:text-5xl font-mono font-black tracking-widest text-slate-900 select-all py-1"
+                  >
+                    {verificationCode}
+                  </div>
+                  <p className="text-[11px] text-slate-500 font-medium">
+                    Write this exact 6-character code on your notebook page
+                  </p>
+                </div>
+
+                {/* Clear Instruction Card */}
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-3">
+                  <div className="flex items-start gap-3">
+                    <div className="w-6 h-6 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center shrink-0 mt-0.5 shadow-xs">
+                      1
+                    </div>
+                    <p className="text-xs text-slate-700 font-medium leading-relaxed">
+                      Write this code clearly on your notebook before taking photos.
+                    </p>
+                  </div>
+
+                  <div className="flex items-start gap-3">
+                    <div className="w-6 h-6 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center shrink-0 mt-0.5 shadow-xs">
+                      2
+                    </div>
+                    <p className="text-xs text-slate-700 font-medium leading-relaxed">
+                      Keep this code visible in the photograph.
+                    </p>
+                  </div>
+
+                  <div className="flex items-start gap-3">
+                    <div className="w-6 h-6 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center shrink-0 mt-0.5 shadow-xs">
+                      3
+                    </div>
+                    <p className="text-xs text-slate-700 font-medium leading-relaxed">
+                      Write this code clearly on your notebook before taking photos. Keep the code visible in the captured page.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Primary Student Acknowledgment CTA */}
+                <div className="pt-2">
+                  <Button
+                    type="button"
+                    variant="primary"
+                    size="lg"
+                    fullWidth
+                    onClick={() => setView('camera')}
+                    leftIcon={<Camera className="w-5 h-5" />}
+                    className="py-3 text-sm font-bold shadow-md hover:shadow-lg transition-all"
+                  >
+                    I've Written the Code — Start Camera
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* =================================================================== */}
         {/* VIEW 1: LIVE CAMERA VIEW */}
@@ -400,9 +561,17 @@ export const SubmitAssignmentModal: React.FC<SubmitAssignmentModalProps> = ({
                     <span className="bg-black/60 text-white text-[11px] font-bold px-2 py-0.5 rounded backdrop-blur-xs">
                       Page {capturedPages.length + 1}
                     </span>
-                    <span className="bg-blue-600/90 text-white text-[10px] font-bold px-2 py-0.5 rounded backdrop-blur-xs">
-                      Live Camera
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      {verificationCode && (
+                        <span className="bg-amber-400 text-slate-950 text-[11px] font-mono font-black px-2 py-0.5 rounded backdrop-blur-xs flex items-center gap-1 shadow-sm">
+                          <Lock className="w-2.5 h-2.5 text-slate-950" />
+                          {verificationCode}
+                        </span>
+                      )}
+                      <span className="bg-blue-600/90 text-white text-[10px] font-bold px-2 py-0.5 rounded backdrop-blur-xs">
+                        Live Camera
+                      </span>
+                    </div>
                   </div>
 
                   <div className="text-center">
@@ -544,6 +713,26 @@ export const SubmitAssignmentModal: React.FC<SubmitAssignmentModalProps> = ({
               <div className="p-3 text-xs font-medium text-rose-700 bg-rose-50 border border-rose-200 rounded-xl flex items-start gap-2">
                 <AlertCircle className="w-4 h-4 shrink-0 text-rose-600 mt-0.5" />
                 <span>{uploadError}</span>
+              </div>
+            )}
+
+            {/* Verification Code Reminder in Review */}
+            {verificationCode && (
+              <div className="p-3 rounded-xl bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 flex items-center justify-between shadow-xs">
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4 text-blue-600 shrink-0" />
+                  <div>
+                    <span className="text-[10px] font-bold text-blue-700 uppercase tracking-wider block">
+                      Verification Code
+                    </span>
+                    <span className="text-sm font-mono font-black text-slate-900 tracking-wider">
+                      {verificationCode}
+                    </span>
+                  </div>
+                </div>
+                <span className="text-[11px] text-slate-500 font-medium">
+                  Watermarked on pages
+                </span>
               </div>
             )}
 
@@ -746,6 +935,79 @@ export const SubmitAssignmentModal: React.FC<SubmitAssignmentModalProps> = ({
                 </div>
               </div>
             )}
+          </div>
+        )}
+
+        {/* =================================================================== */}
+        {/* VIEW 5: PROFESSIONAL SUBMISSION SUCCESS CONFIRMATION */}
+        {/* =================================================================== */}
+        {view === 'success' && (
+          <div className="py-6 px-4 text-center space-y-5">
+            <div className="w-16 h-16 rounded-full bg-emerald-50 border-2 border-emerald-200 text-emerald-600 flex items-center justify-center mx-auto shadow-sm animate-bounce">
+              <Check className="w-8 h-8 stroke-[3]" />
+            </div>
+
+            <div className="space-y-1">
+              <h3 className="text-xl font-black text-slate-900">
+                Assignment Submitted Successfully
+              </h3>
+              <p className="text-xs font-semibold text-emerald-700">
+                ✓ Submission Successful
+              </p>
+              <p className="text-xs text-slate-500">
+                Your assignment has been submitted to your teacher.
+              </p>
+            </div>
+
+            {/* Submission Summary Card */}
+            <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 text-xs text-left max-w-md mx-auto space-y-2.5">
+              <div className="flex justify-between py-1 border-b border-slate-200/60">
+                <span className="font-semibold text-slate-500">Assignment:</span>
+                <span className="font-bold text-slate-900 text-right truncate max-w-[220px]">
+                  {assignment.title}
+                </span>
+              </div>
+              <div className="flex justify-between py-1 border-b border-slate-200/60">
+                <span className="font-semibold text-slate-500">Subject:</span>
+                <span className="font-bold text-slate-900">{assignment.subject}</span>
+              </div>
+              <div className="flex justify-between py-1 border-b border-slate-200/60">
+                <span className="font-semibold text-slate-500">Submitted At:</span>
+                <span className="font-bold text-slate-900">
+                  {formatDateTime(createdSubmission?.submittedAt || new Date().toISOString())}
+                </span>
+              </div>
+              <div className="flex justify-between py-1 border-b border-slate-200/60">
+                <span className="font-semibold text-slate-500">Pages Submitted:</span>
+                <span className="font-bold text-blue-700">
+                  {createdSubmission?.imageUrls?.length || capturedPages.length} Pages
+                </span>
+              </div>
+              <div className="flex justify-between py-1">
+                <span className="font-semibold text-slate-500">Status:</span>
+                <span className="font-extrabold text-[11px] px-2 py-0.5 rounded-full bg-blue-100 text-blue-800">
+                  SUBMITTED
+                </span>
+              </div>
+            </div>
+
+            <div className="pt-2 max-w-md mx-auto">
+              <Button
+                type="button"
+                variant="primary"
+                size="md"
+                fullWidth
+                leftIcon={<Eye className="w-4 h-4" />}
+                onClick={() => {
+                  if (createdSubmission) {
+                    onSubmitted(createdSubmission);
+                  }
+                  handleModalClose();
+                }}
+              >
+                View Submission
+              </Button>
+            </div>
           </div>
         )}
       </div>

@@ -76,7 +76,7 @@ export const AdminOverviewPage: React.FC = () => {
         <div>
           <h1 className="text-2xl font-black tracking-tight text-slate-900">Academic Overview</h1>
           <p className="text-xs text-slate-500">
-            Monitor all posted notebook assignments and student Google Drive submissions.
+            Monitor all posted notebook assignments and student submissions.
           </p>
         </div>
 
@@ -208,7 +208,7 @@ export const AdminOverviewPage: React.FC = () => {
                 <tr>
                   <th className="py-3.5 px-4">Student</th>
                   <th className="py-3.5 px-4">Assignment</th>
-                  <th className="py-3.5 px-4">Google Drive Link</th>
+                  <th className="py-3.5 px-4">Submission / Notebook</th>
                   <th className="py-3.5 px-4">Status & Marks</th>
                   <th className="py-3.5 px-4">Feedback</th>
                 </tr>
@@ -231,15 +231,29 @@ export const AdminOverviewPage: React.FC = () => {
                         {sub.assignmentTitle}
                       </td>
                       <td className="py-3.5 px-4">
-                        <a
-                          href={sub.driveLink}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 font-bold hover:bg-blue-100 transition-colors text-[11px]"
-                        >
-                          <span>Open Drive</span>
-                          <ExternalLink className="w-3 h-3" />
-                        </a>
+                        {sub.imageUrls && sub.imageUrls.length > 0 ? (
+                          <a
+                            href={sub.imageUrls[0]}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 font-bold hover:bg-blue-100 transition-colors text-[11px]"
+                          >
+                            <span>View Notebook ({sub.imageUrls.length} P)</span>
+                            <ExternalLink className="w-3 h-3" />
+                          </a>
+                        ) : sub.driveLink ? (
+                          <a
+                            href={sub.driveLink}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 font-bold hover:bg-slate-200 transition-colors text-[11px]"
+                          >
+                            <span>Legacy Drive</span>
+                            <ExternalLink className="w-3 h-3" />
+                          </a>
+                        ) : (
+                          <span className="text-slate-400 text-[11px]">No link</span>
+                        )}
                       </td>
                       <td className="py-3.5 px-4">
                         {sub.status === 'checked' ? (

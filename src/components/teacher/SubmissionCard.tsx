@@ -1,5 +1,4 @@
-import React from 'react';
-import { ExternalLink, Edit3, Award, MessageSquare } from 'lucide-react';
+import { ExternalLink, Edit3, Award, MessageSquare, Camera } from 'lucide-react';
 import { Submission } from '../../types';
 import { Card } from '../common/Card';
 import { Button } from '../common/Button';
@@ -60,15 +59,24 @@ export const SubmissionCard: React.FC<SubmissionCardProps> = ({
 
       {/* Action buttons */}
       <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-100">
-        <a
-          href={submission.driveLink}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-700 hover:underline"
-        >
-          <ExternalLink className="w-3.5 h-3.5" />
-          Open Drive Link
-        </a>
+        {submission.imageUrls && submission.imageUrls.length > 0 ? (
+          <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-700">
+            <Camera className="w-3.5 h-3.5 text-blue-600" />
+            <span>{submission.imageUrls.length} Page{submission.imageUrls.length > 1 ? 's' : ''}</span>
+          </span>
+        ) : submission.driveLink ? (
+          <a
+            href={submission.driveLink}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 hover:underline"
+          >
+            <ExternalLink className="w-3.5 h-3.5" />
+            Legacy Drive
+          </a>
+        ) : (
+          <span className="text-xs text-slate-400">Notebook Submission</span>
+        )}
 
         <Button
           variant={submission.status === 'checked' ? 'outline' : 'primary'}

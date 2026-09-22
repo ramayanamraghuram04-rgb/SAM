@@ -108,3 +108,59 @@ export const SubmissionStatusBadge: React.FC<{ status: SubmissionStatus; classNa
       );
   }
 };
+
+export type AssignmentDisplayStatus = 'NEW' | 'PENDING' | 'SUBMITTED' | 'RETURNED' | 'GRADED' | 'OVERDUE';
+
+export const AssignmentDisplayStatusBadge: React.FC<{ 
+  displayStatus: AssignmentDisplayStatus; 
+  className?: string 
+}> = ({
+  displayStatus,
+  className = '',
+}) => {
+  switch (displayStatus) {
+    case 'GRADED':
+      return (
+        <Badge variant="emerald" size="sm" className={className}>
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+          GRADED
+        </Badge>
+      );
+    case 'SUBMITTED':
+      return (
+        <Badge variant="amber" size="sm" className={className}>
+          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
+          SUBMITTED
+        </Badge>
+      );
+    case 'RETURNED':
+      return (
+        <Badge variant="rose" size="sm" className={className}>
+          <span className="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0" />
+          RETURNED
+        </Badge>
+      );
+    case 'OVERDUE':
+      return (
+        <Badge variant="danger" size="sm" className={className}>
+          <span className="w-1.5 h-1.5 rounded-full bg-rose-600 shrink-0" />
+          OVERDUE
+        </Badge>
+      );
+    case 'NEW':
+      return (
+        <Badge variant="blue" size="sm" className={className}>
+          <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
+          NEW
+        </Badge>
+      );
+    case 'PENDING':
+    default:
+      return (
+        <Badge variant="slate" size="sm" className={className}>
+          <span className="w-1.5 h-1.5 rounded-full bg-slate-400 shrink-0" />
+          PENDING
+        </Badge>
+      );
+  }
+};

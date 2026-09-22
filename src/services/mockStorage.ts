@@ -13,7 +13,8 @@ import {
   AppNotification,
   Subject,
   TeachingAssignment,
-  UserRole
+  UserRole,
+  VerificationCodeRecord
 } from '../types';
 
 const STORAGE_KEYS = {
@@ -26,6 +27,7 @@ const STORAGE_KEYS = {
   NOTIFICATIONS: 'sam_notifications',
   SUBJECTS: 'sam_subjects',
   TEACHING_ASSIGNMENTS: 'sam_teaching_assignments',
+  VERIFICATION_CODES: 'sam_verification_codes',
   CURRENT_SESSION: 'sam_current_auth_session',
 };
 
@@ -211,6 +213,11 @@ export const MockStore = {
     saveList(STORAGE_KEYS.CLASSES, classes);
   },
 
+  deleteClass(id: string): void {
+    const classes = this.getClasses().filter((c) => c.id !== id);
+    saveList(STORAGE_KEYS.CLASSES, classes);
+  },
+
   // Class Members
   getMembers(): ClassMember[] {
     return getList<ClassMember>(STORAGE_KEYS.MEMBERS);
@@ -249,7 +256,17 @@ export const MockStore = {
 
   saveAssignment(assignment: Assignment): void {
     const assignments = this.getAssignments();
-    assignments.unshift(assignment);
+    const idx = assignments.findIndex((a) => a.id === assignment.id);
+    if (idx >= 0) {
+      assignments[idx] = assignment;
+    } else {
+      assignments.unshift(assignment);
+    }
+    saveList(STORAGE_KEYS.ASSIGNMENTS, assignments);
+  },
+
+  deleteAssignment(id: string): void {
+    const assignments = this.getAssignments().filter((a) => a.id !== id);
     saveList(STORAGE_KEYS.ASSIGNMENTS, assignments);
   },
 
@@ -297,5 +314,26 @@ export const MockStore = {
       }
     });
     saveList(STORAGE_KEYS.NOTIFICATIONS, notifs);
+  },
+
+  getVerificationCodes(): VerificationCodeRecord[] {
+    return getList<VerificationCodeRecord>(STORAGE_KEYS.VERIFICATION_CODES);
+  },
+
+  getVerificationCode(assignmentId: string, studentId: string): VerificationCodeRecord | undefined {
+    return this.getVerificationCodes().find(
+      (v) => v.assignmentId === assignmentId && v.studentId === studentId && v.active
+    );
+  },
+
+  saveVerificationCode(record: VerificationCodeRecord): void {
+    const list = this.getVerificationCodes();
+    const idx = list.findIndex((v) => v.id === record.id);
+    if (idx >= 0) {
+      list[idx] = record;
+    } else {
+      list.push(record);
+    }
+    saveList(STORAGE_KEYS.VERIFICATION_CODES, list);
   },
 };

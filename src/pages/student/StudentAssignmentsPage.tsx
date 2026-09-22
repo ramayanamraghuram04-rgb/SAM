@@ -91,7 +91,7 @@ export const StudentAssignmentsPage: React.FC<StudentAssignmentsPageProps> = ({
         <div>
           <h1 className="text-2xl font-black text-slate-900 tracking-tight">Notebook Assignments</h1>
           <p className="text-xs text-slate-500">
-            Write answers in physical notebooks, upload photos to Google Drive, and submit links
+            Write answers in physical notebooks, capture pages directly with your device camera, and submit
           </p>
         </div>
       </div>
@@ -148,10 +148,10 @@ export const StudentAssignmentsPage: React.FC<StudentAssignmentsPageProps> = ({
         <LoadingSpinner message="Loading your assignments..." />
       ) : filteredAssignments.length === 0 ? (
         <EmptyState
-          title="No assignments match filter"
+          title={assignments.length === 0 ? "No assignments yet" : "No assignments match filter"}
           description={
             assignments.length === 0
-              ? "You don't have any assignments yet. Make sure you accept teacher invitations in 'My Classes'."
+              ? "No assignments yet. When your faculty publishes assignments for your class, they will appear here."
               : 'No assignments found in this status category.'
           }
         />
