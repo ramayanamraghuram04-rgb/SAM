@@ -375,7 +375,7 @@ export const SubmitAssignmentModal: React.FC<SubmitAssignmentModalProps> = ({
       });
 
       if (res.error || !res.submission) {
-        throw new Error(res.error || 'Failed to save submission record in Firestore.');
+        throw new Error(res.error || 'Failed to save submission record. Please try again.');
       }
 
       // Success: show professional submission confirmation screen
@@ -836,6 +836,23 @@ export const SubmitAssignmentModal: React.FC<SubmitAssignmentModalProps> = ({
               />
             </div>
 
+            {/* Verification Code Handwriting Requirement */}
+            {verificationCode && (
+              <div className="p-3 rounded-xl border border-blue-200 bg-blue-50/60 flex items-start gap-2.5">
+                <Sparkles className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+                <div className="text-xs text-blue-950 space-y-0.5">
+                  <span className="font-bold text-blue-900 block">Verification Code Requirement:</span>
+                  <p className="text-blue-800">
+                    Ensure your assigned verification code{' '}
+                    <strong className="font-mono bg-white px-1.5 py-0.5 rounded border border-blue-200 text-blue-700 tracking-wider">
+                      {verificationCode}
+                    </strong>{' '}
+                    is visibly handwritten in ink on your notebook pages before submitting.
+                  </p>
+                </div>
+              </div>
+            )}
+
             {/* Student Confirmation */}
             <div className="p-3 rounded-xl border border-slate-200 bg-slate-50 flex items-start gap-2.5">
               <input
@@ -891,10 +908,10 @@ export const SubmitAssignmentModal: React.FC<SubmitAssignmentModalProps> = ({
 
             <div>
               <h4 className="text-base font-bold text-slate-900">
-                Uploading Assignment Pages to Cloud Storage
+                Securing & Uploading Assignment Pages
               </h4>
               <p className="text-xs text-slate-500 mt-1">
-                Uploading Page {uploadProgress.current} of {uploadProgress.total} directly to Cloudinary...
+                Uploading Page {uploadProgress.current} of {uploadProgress.total}...
               </p>
             </div>
 

@@ -7,9 +7,11 @@ import {
   Layers, 
   CheckCircle, 
   Lock, 
-  Database,
-  Hash,
-  AlertCircle
+  Database, 
+  Hash, 
+  AlertCircle,
+  Building2,
+  ShieldCheck
 } from 'lucide-react';
 import { DEPARTMENT, DEPARTMENT_FULL, SUPPORTED_SEMESTERS } from '../../config/constants';
 import { isLiveFirebaseConfigured } from '../../config/firebase';
@@ -47,7 +49,7 @@ export const AdminSettingsPage: React.FC = () => {
           </span>
         </div>
         <p className="text-sm text-slate-500 mt-1">
-          Review department configuration, role security parameters, Cloudinary media storage, and verification policies.
+          Review department configuration, role security parameters, cloud storage, and verification policies.
         </p>
       </div>
 
@@ -58,32 +60,30 @@ export const AdminSettingsPage: React.FC = () => {
         <div className="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-xs space-y-4">
           <div className="flex items-center gap-3 pb-3 border-b border-slate-100">
             <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
-              <Layers className="w-5 h-5" />
+              <Building2 className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-slate-900">Department Configuration</h3>
-              <p className="text-xs text-slate-500">Academic structure and enrolled semesters</p>
+              <h3 className="text-base font-bold text-slate-900">Academic Institution</h3>
+              <p className="text-xs text-slate-500">Department of Computer Engineering</p>
             </div>
           </div>
 
           <div className="space-y-3 text-sm">
             <div className="flex justify-between py-2 border-b border-slate-50">
-              <span className="text-slate-500 font-medium">Department Code</span>
-              <span className="font-bold text-slate-900">{DEPARTMENT}</span>
+              <span className="text-slate-500 font-medium">Institution Code</span>
+              <span className="font-mono font-bold text-slate-900">24170</span>
             </div>
             <div className="flex justify-between py-2 border-b border-slate-50">
-              <span className="text-slate-500 font-medium">Department Full Name</span>
-              <span className="font-bold text-slate-900 text-right">{DEPARTMENT_FULL}</span>
+              <span className="text-slate-500 font-medium">Department</span>
+              <span className="font-bold text-slate-900">Computer Engineering (CM)</span>
             </div>
-            <div>
-              <span className="text-slate-500 font-medium block mb-2">Configured Semesters</span>
-              <div className="flex flex-wrap gap-2">
-                {SUPPORTED_SEMESTERS.map((sem) => (
-                  <span key={sem.id} className="px-3 py-1 rounded-lg bg-blue-50 text-blue-700 text-xs font-bold border border-blue-100">
-                    {sem.label} ({sem.year})
-                  </span>
-                ))}
-              </div>
+            <div className="flex justify-between py-2 border-b border-slate-50">
+              <span className="text-slate-500 font-medium">Active Semesters</span>
+              <span className="font-semibold text-blue-600">1st, 3rd, 4th, 5th Semesters</span>
+            </div>
+            <div className="flex justify-between py-2">
+              <span className="text-slate-500 font-medium">Academic Year</span>
+              <span className="font-bold text-slate-900">2026 – 2027</span>
             </div>
           </div>
         </div>
@@ -92,18 +92,18 @@ export const AdminSettingsPage: React.FC = () => {
         <div className="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-xs space-y-4">
           <div className="flex items-center gap-3 pb-3 border-b border-slate-100">
             <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center font-bold">
-              <Shield className="w-5 h-5" />
+              <ShieldCheck className="w-5 h-5" />
             </div>
             <div>
               <h3 className="text-base font-bold text-slate-900">Role & Access Control</h3>
-              <p className="text-xs text-slate-500">Authoritative UID and identity rules</p>
+              <p className="text-xs text-slate-500">Security architecture & session boundaries</p>
             </div>
           </div>
 
           <div className="space-y-3 text-sm">
             <div className="flex justify-between py-2 border-b border-slate-50">
               <span className="text-slate-500 font-medium">Authoritative Identity</span>
-              <span className="font-bold text-purple-700">Firebase Auth UID</span>
+              <span className="font-bold text-purple-700">Cryptographic Account UID</span>
             </div>
             <div className="flex justify-between py-2 border-b border-slate-50">
               <span className="text-slate-500 font-medium">Application Roles</span>
@@ -120,33 +120,33 @@ export const AdminSettingsPage: React.FC = () => {
           </div>
         </div>
 
-        {/* 3. Cloudinary Image Storage */}
+        {/* 3. Cloud Media Storage */}
         <div className="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-xs space-y-4">
           <div className="flex items-center gap-3 pb-3 border-b border-slate-100">
             <div className="w-10 h-10 rounded-xl bg-sky-50 text-sky-600 flex items-center justify-center font-bold">
               <Cloud className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-slate-900">Cloudinary Media Storage</h3>
-              <p className="text-xs text-slate-500">Direct unsigned camera upload service</p>
+              <h3 className="text-base font-bold text-slate-900">Cloud Media Storage Engine</h3>
+              <p className="text-xs text-slate-500">Direct camera upload service</p>
             </div>
           </div>
 
           <div className="space-y-3 text-sm">
             <div className="flex justify-between py-2 border-b border-slate-50">
-              <span className="text-slate-500 font-medium">Cloud Name</span>
+              <span className="text-slate-500 font-medium">Storage Tenant ID</span>
               <code className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-800 text-xs font-mono font-bold">
                 {cloudName}
               </code>
             </div>
             <div className="flex justify-between py-2 border-b border-slate-50">
-              <span className="text-slate-500 font-medium">Upload Preset</span>
+              <span className="text-slate-500 font-medium">Security Upload Profile</span>
               <code className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-800 text-xs font-mono font-bold">
                 {uploadPreset}
               </code>
             </div>
             <div className="flex justify-between py-2 border-b border-slate-50">
-              <span className="text-slate-500 font-medium">Target Folder</span>
+              <span className="text-slate-500 font-medium">Storage Directory</span>
               <span className="font-mono text-xs text-slate-700 font-semibold">sam/assignments</span>
             </div>
             <div className="flex justify-between py-2 border-b border-slate-50">

@@ -174,7 +174,7 @@ export const AdminProfilePage: React.FC = () => {
 
           <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/70 sm:col-span-2">
             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
-              Firebase Auth Internal Identity
+              System Security Identity
             </span>
             <div className="flex items-center justify-between text-xs font-mono text-slate-700">
               <span>admin_{adminUser?.mobile || '6281803875'}@sam.internal</span>
@@ -184,7 +184,7 @@ export const AdminProfilePage: React.FC = () => {
         </div>
       </Card>
 
-      {/* Firebase Firestore Rules Deployment Helper */}
+      {/* Cloud Security Rules Deployment Helper */}
       <Card className="p-6 border-blue-200 bg-gradient-to-br from-blue-50/50 to-indigo-50/30 space-y-4">
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-center gap-2.5">
@@ -192,7 +192,7 @@ export const AdminProfilePage: React.FC = () => {
               <Code className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-slate-900">Firestore Cloud Security Rules</h3>
+              <h3 className="text-sm font-bold text-slate-900">Cloud Database Security Rules</h3>
               <p className="text-xs text-slate-500">
                 To sync all Admin operations and student submissions across devices in real time:
               </p>
@@ -215,8 +215,8 @@ export const AdminProfilePage: React.FC = () => {
         </div>
 
         <ol className="list-decimal list-inside text-xs text-slate-600 space-y-1 pt-1 font-medium">
-          <li>Open your <strong><a href="https://console.firebase.google.com/" target="_blank" rel="noreferrer" className="text-blue-600 underline inline-flex items-center gap-0.5">Firebase Console <ExternalLink className="w-3 h-3" /></a></strong>.</li>
-          <li>Select project <strong>smart-ssignment-manager</strong> $\rightarrow$ <strong>Firestore Database</strong>.</li>
+          <li>Open your <strong>Cloud Database Management Console</strong>.</li>
+          <li>Select project <strong>smart-ssignment-manager</strong> $\rightarrow$ <strong>Database Rules</strong>.</li>
           <li>Click the <strong>Rules</strong> tab at the top.</li>
           <li>Paste the rules copied above and click <strong>Publish</strong>.</li>
         </ol>
@@ -231,8 +231,8 @@ export const AdminProfilePage: React.FC = () => {
             <div className="flex items-center gap-2.5">
               <Database className="w-4 h-4 text-blue-600" />
               <div>
-                <span className="font-bold text-slate-800 block">Cloud Firestore Connection</span>
-                <span className="text-[10px] text-slate-500">Firebase project: smart-ssignment-manager</span>
+                <span className="font-bold text-slate-800 block">Cloud Database Connection</span>
+                <span className="text-[10px] text-slate-500">Project: smart-ssignment-manager</span>
               </div>
             </div>
             <Badge variant={isLiveFirebaseConfigured ? 'success' : 'warning'} size="sm">

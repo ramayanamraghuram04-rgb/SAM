@@ -126,7 +126,7 @@ export const cloudinaryService = {
 
     if (!cloudName || !preset) {
       throw new CloudinaryUploadError(
-        'Cloudinary is not configured. Missing cloud name or upload preset.',
+        'Storage service is not configured. Please contact the administrator.',
         'CONFIG_ERROR'
       );
     }
@@ -167,7 +167,7 @@ export const cloudinaryService = {
         };
       }
 
-      // Handle successful HTTP response or Cloudinary rejection
+      // Handle successful HTTP response or storage rejection
       xhr.onload = () => {
         try {
           const response = JSON.parse(xhr.responseText || '{}');
@@ -187,8 +187,9 @@ export const cloudinaryService = {
             };
             resolve(result);
           } else {
-            // Cloudinary API returned an error
-            const serverMessage = response.error?.message || `Cloudinary upload failed (HTTP ${xhr.status})`;
+            // Storage API returned an error
+            let serverMessage = response.error?.message || `Upload failed (HTTP ${xhr.status})`;
+            serverMessage = serverMessage.replace(/cloudinary/gi, 'Storage');
             reject(
               new CloudinaryUploadError(
                 serverMessage,
@@ -201,7 +202,7 @@ export const cloudinaryService = {
         } catch (parseErr) {
           reject(
             new CloudinaryUploadError(
-              `Failed to parse Cloudinary response: ${xhr.responseText.slice(0, 100)}`,
+              'Failed to process upload response. Please try again.',
               'CLOUDINARY_REJECTED',
               xhr.status
             )
@@ -213,7 +214,7 @@ export const cloudinaryService = {
       xhr.onerror = () => {
         reject(
           new CloudinaryUploadError(
-            'Network failure during Cloudinary upload. Please check your internet connection.',
+            'Network failure during image upload. Please check your internet connection.',
             'NETWORK_ERROR'
           )
         );
