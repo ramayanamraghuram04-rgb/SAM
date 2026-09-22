@@ -132,7 +132,7 @@ export const GradeSubmissionModal: React.FC<GradeSubmissionModalProps> = ({
       const res = await submissionService.gradeSubmission({
         submission,
         teacherId: user.uid,
-        teacherName: user.name,
+        teacherName: user.name || (user as any).displayName || 'Faculty',
         marks: Number(marks),
         maxMarks,
         feedback: feedback.trim(),
@@ -174,7 +174,7 @@ export const GradeSubmissionModal: React.FC<GradeSubmissionModalProps> = ({
       const res = await submissionService.gradeSubmission({
         submission,
         teacherId: user.uid,
-        teacherName: user.name,
+        teacherName: user.name || (user as any).displayName || 'Faculty',
         marks: 0,
         maxMarks,
         feedback: feedback.trim(),
