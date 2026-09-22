@@ -146,12 +146,7 @@ service cloud.firestore {
           request.resource.data.marks == null
         )
       );
-      allow update: if isAdmin() || (
-        isStaff() && (
-          resource.data.teacherId == request.auth.uid ||
-          !('teacherId' in resource.data)
-        )
-      ) || (
+      allow update: if isAdmin() || isStaff() || (
         isStudent() && (
           resource.data.studentId == request.auth.uid || 
           resource.data.studentUid == request.auth.uid

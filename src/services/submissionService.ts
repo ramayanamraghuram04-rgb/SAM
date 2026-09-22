@@ -425,40 +425,57 @@ export const submissionService = {
     const checkedAt = new Date().toISOString();
     const isChecked = status === 'checked';
 
-    const updates = {
+    const updates: Record<string, any> = {
       marks: isChecked ? marks : null,
       teacherFeedback: feedback.trim(),
       feedback: feedback.trim(),
       status,
       checkedAt: isChecked ? checkedAt : null,
       gradedAt: isChecked ? checkedAt : null,
-      gradedBy: isChecked ? teacherId : undefined,
+      gradedBy: isChecked ? teacherId : null,
       returnedAt: !isChecked ? checkedAt : null,
-      returnedBy: !isChecked ? teacherId : undefined,
+      returnedBy: !isChecked ? teacherId : null,
       updatedAt: checkedAt,
     };
+
+    // Clean any potential undefined keys
+    for (const key of Object.keys(updates)) {
+      if (updates[key] === undefined) {
+        delete updates[key];
+      }
+    }
 
     if (isLiveFirebaseConfigured) {
       try {
         await updateDoc(doc(db, 'submissions', submission.id), updates);
 
-        // Notify student
-        await notificationService.createNotification({
-          recipientUid: submission.studentId,
-          senderUid: teacherId,
-          senderName: teacherName,
-          type: isChecked ? 'submission_graded' : 'submission_returned',
-          title: isChecked ? 'Assignment Evaluated' : 'Returned for Correction',
-          message: isChecked
-            ? `Your assignment "${submission.assignmentTitle}" received ${marks}/${maxMarks} marks. ${feedback ? `Feedback: "${feedback}"` : ''}`
-            : `Teacher requested resubmission for "${submission.assignmentTitle}". Note: "${feedback}"`,
-          link: `/student/assignments/${submission.assignmentId}`,
-        });
+        // Notify student (non-fatal if notification fails)
+        try {
+          const studentRecipient = submission.studentId || (submission as any).studentUid;
+          if (studentRecipient) {
+            await notificationService.createNotification({
+              recipientUid: studentRecipient,
+              senderUid: teacherId,
+              senderName: teacherName,
+              type: isChecked ? 'submission_graded' : 'submission_returned',
+              title: isChecked ? 'Assignment Evaluated' : 'Returned for Correction',
+              message: isChecked
+                ? `Your assignment "${submission.assignmentTitle || 'Assignment'}" received ${marks}/${maxMarks} marks. ${feedback ? `Feedback: "${feedback}"` : ''}`
+                : `Teacher requested resubmission for "${submission.assignmentTitle || 'Assignment'}". Note: "${feedback}"`,
+              link: `/student/assignments/${submission.assignmentId}`,
+            });
+          }
+        } catch (notifErr) {
+          console.warn('Non-fatal notification error:', notifErr);
+        }
 
         return { success: true, error: null };
-      } catch (err) {
+      } catch (err: any) {
         console.error('Error grading submission:', err);
-        return { success: false, error: 'Failed to update marks. Please try again.' };
+        return { 
+          success: false, 
+          error: err?.message ? `Failed to update marks: ${err.message}` : 'Failed to update marks. Please try again.' 
+        };
       }
     } else {
       // Mock fallback
