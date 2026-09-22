@@ -113,27 +113,27 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2.5 pt-1">
           {invitations.length > 0 && (
-            <Button
-              variant="secondary"
-              size="md"
-              leftIcon={<Mail className="w-4 h-4" />}
+            <button
+              type="button"
               onClick={() => onNavigateTab('classes')}
-              className="bg-white text-indigo-700 hover:bg-indigo-50 shadow-xs animate-bounce"
+              className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs shadow-md transition-all active:scale-[0.98] cursor-pointer animate-bounce"
             >
-              {invitations.length} Class Invite{invitations.length > 1 ? 's' : ''}
-            </Button>
+              <Mail className="w-4 h-4 text-slate-950" />
+              <span>{invitations.length} Class Invite{invitations.length > 1 ? 's' : ''}</span>
+            </button>
           )}
 
-          <Button
-            variant="outline"
-            size="md"
+          <button
+            type="button"
             onClick={() => onNavigateTab('assignments')}
-            className="bg-indigo-900/60 hover:bg-indigo-900 border border-white/20 text-white"
+            className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-white text-blue-700 font-extrabold text-sm shadow-md hover:bg-blue-50 hover:shadow-lg transition-all active:scale-[0.98] cursor-pointer border border-white/60"
           >
-            My Assignments
-          </Button>
+            <BookOpen className="w-4 h-4 text-blue-600" />
+            <span className="font-extrabold text-blue-700 tracking-wide">My Assignments</span>
+            <ArrowRight className="w-4 h-4 text-blue-500" />
+          </button>
         </div>
       </div>
 
