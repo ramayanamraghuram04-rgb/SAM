@@ -14,7 +14,8 @@ import {
   Lock,
   Archive,
   Trash2,
-  AlertCircle
+  AlertCircle,
+  Image as ImageIcon
 } from 'lucide-react';
 import { Card } from '../../components/common/Card';
 import { Button } from '../../components/common/Button';
@@ -320,6 +321,13 @@ export const AdminAssignmentsPage: React.FC = () => {
                           PUBLISHED
                         </span>
                       )}
+
+                      {asg.questionImageUrl && (
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 flex items-center gap-1">
+                          <ImageIcon className="w-2.5 h-2.5" />
+                          <span>Image Attached</span>
+                        </span>
+                      )}
                     </div>
 
                     <h3 className="text-base font-bold text-slate-900 line-clamp-1">
@@ -397,6 +405,35 @@ export const AdminAssignmentsPage: React.FC = () => {
                   <p className="text-xs text-slate-700 whitespace-pre-wrap leading-relaxed">
                     {selectedAssignment.instructions}
                   </p>
+                </div>
+              )}
+
+              {selectedAssignment.questionImageUrl && (
+                <div className="pt-2 border-t border-slate-200/80 space-y-1.5">
+                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
+                    Question Image
+                  </span>
+                  <div className="flex items-center gap-3 bg-white p-2.5 rounded-xl border border-slate-200">
+                    <img
+                      src={selectedAssignment.questionImageUrl}
+                      alt="Question"
+                      className="w-16 h-16 object-cover rounded-lg border border-slate-200 cursor-pointer hover:opacity-90"
+                      onClick={() => window.open(selectedAssignment.questionImageUrl, '_blank')}
+                    />
+                    <div className="text-xs text-slate-600 space-y-0.5">
+                      <p className="font-bold text-slate-900">Attached Question Photo / Diagram</p>
+                      <p className="text-[11px] text-slate-400">Stored in Cloudinary (sam/questions)</p>
+                      <a
+                        href={selectedAssignment.questionImageUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-blue-600 hover:underline font-semibold flex items-center gap-1 pt-0.5"
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                        <span>View Full Size</span>
+                      </a>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>

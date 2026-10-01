@@ -8,7 +8,9 @@ import {
   Calendar, 
   CreditCard, 
   ArrowRight,
-  BookOpen
+  BookOpen,
+  Camera,
+  Upload
 } from 'lucide-react';
 import { ClassItem, Assignment, ClassMember } from '../../types';
 import { classService } from '../../services/classService';
@@ -42,6 +44,7 @@ export const TeacherClassDetailsPage: React.FC<TeacherClassDetailsPageProps> = (
   // Modals
   const [isInviteModalOpen, setIsInviteModalOpen] = useState<boolean>(false);
   const [isCreateAsgModalOpen, setIsCreateAsgModalOpen] = useState<boolean>(false);
+  const [initialAttachmentMode, setInitialAttachmentMode] = useState<'camera' | 'upload' | 'drive' | null>(null);
 
   const fetchClassData = async () => {
     try {
@@ -93,7 +96,7 @@ export const TeacherClassDetailsPage: React.FC<TeacherClassDetailsPageProps> = (
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Button
               variant="secondary"
               size="sm"
@@ -103,10 +106,35 @@ export const TeacherClassDetailsPage: React.FC<TeacherClassDetailsPageProps> = (
               Invite Student
             </Button>
             <Button
+              variant="outline"
+              size="sm"
+              leftIcon={<Camera className="w-3.5 h-3.5 text-blue-600" />}
+              onClick={() => {
+                setInitialAttachmentMode('camera');
+                setIsCreateAsgModalOpen(true);
+              }}
+            >
+              Camera Scan
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              leftIcon={<Upload className="w-3.5 h-3.5 text-indigo-600" />}
+              onClick={() => {
+                setInitialAttachmentMode('upload');
+                setIsCreateAsgModalOpen(true);
+              }}
+            >
+              Upload Question
+            </Button>
+            <Button
               variant="primary"
               size="sm"
               leftIcon={<Plus className="w-3.5 h-3.5" />}
-              onClick={() => setIsCreateAsgModalOpen(true)}
+              onClick={() => {
+                setInitialAttachmentMode(null);
+                setIsCreateAsgModalOpen(true);
+              }}
             >
               New Assignment
             </Button>
@@ -249,9 +277,13 @@ export const TeacherClassDetailsPage: React.FC<TeacherClassDetailsPageProps> = (
 
       <CreateAssignmentModal
         isOpen={isCreateAsgModalOpen}
-        onClose={() => setIsCreateAsgModalOpen(false)}
+        onClose={() => {
+          setIsCreateAsgModalOpen(false);
+          setInitialAttachmentMode(null);
+        }}
         classes={[classItem]}
         defaultClassId={classItem.id}
+        initialAttachmentMode={initialAttachmentMode}
         onAssignmentCreated={(newAsg) => {
           setAssignments((prev) => [newAsg, ...prev]);
         }}

@@ -11,13 +11,15 @@ import {
   RotateCcw,
   Camera,
   Image as ImageIcon,
-  FileText
+  FileText,
+  Maximize2
 } from 'lucide-react';
 import { Assignment, Submission } from '../../types';
 import { submissionService } from '../../services/submissionService';
 import { useAuth } from '../../context/AuthContext';
 import { Card } from '../../components/common/Card';
 import { Button } from '../../components/common/Button';
+import { Modal } from '../../components/common/Modal';
 import { SemesterBadge, AssignmentDisplayStatusBadge } from '../../components/common/Badge';
 import { SubmitAssignmentModal } from '../../components/student/SubmitAssignmentModal';
 import { NotebookImageViewer } from '../../components/common/NotebookImageViewer';
@@ -36,6 +38,12 @@ export const StudentAssignmentDetailsPage: React.FC<StudentAssignmentDetailsPage
   const [submission, setSubmission] = useState<Submission | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [isSubmitModalOpen, setIsSubmitModalOpen] = useState<boolean>(false);
+  const [isQuestionImageModalOpen, setIsQuestionImageModalOpen] = useState<boolean>(false);
+  const [activeQuestionPageIndex, setActiveQuestionPageIndex] = useState<number>(0);
+
+  const questionPages = (assignment.questionImageUrls && assignment.questionImageUrls.length > 0)
+    ? assignment.questionImageUrls
+    : (assignment.questionImageUrl ? [assignment.questionImageUrl] : []);
 
   const fetchSubmission = async () => {
     if (!user?.uid) return;
@@ -97,6 +105,63 @@ export const StudentAssignmentDetailsPage: React.FC<StudentAssignmentDetailsPage
             {assignment.description}
           </p>
         </div>
+
+        {/* Question Image (Optional) */}
+        {assignment.questionImageUrl && (
+          <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/70 space-y-3">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 flex items-center justify-between">
+              <span className="flex items-center gap-1.5">
+                <ImageIcon className="w-3.5 h-3.5 text-blue-600" />
+                <span>Question Image / Diagram</span>
+              </span>
+              <span className="text-[10px] font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200">
+                {questionPages.length > 1 ? `${questionPages.length} Pages Available` : "Teacher's Reference Photo"}
+              </span>
+            </span>
+
+            {/* If multiple pages, show thumbnail selector tabs */}
+            {questionPages.length > 1 && (
+              <div className="flex items-center gap-2 overflow-x-auto pb-1">
+                {questionPages.map((_url, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => setActiveQuestionPageIndex(idx)}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                      activeQuestionPageIndex === idx
+                        ? 'border-blue-600 bg-blue-600 text-white shadow-xs'
+                        : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
+                    }`}
+                  >
+                    <span>Page {idx + 1}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            <div className="relative group overflow-hidden rounded-xl border border-slate-200 bg-white">
+              <img
+                src={questionPages[activeQuestionPageIndex] || assignment.questionImageUrl}
+                alt="Assignment Question"
+                className="w-full max-h-[460px] object-contain cursor-pointer hover:opacity-95 transition-opacity"
+                onClick={() => setIsQuestionImageModalOpen(true)}
+              />
+              <div className="p-2.5 bg-slate-50/80 border-t border-slate-100 flex items-center justify-between text-xs text-slate-600">
+                <span className="text-[11px] text-slate-500">
+                  {questionPages.length > 1 ? `Viewing Page ${activeQuestionPageIndex + 1} of ${questionPages.length} • Tap to enlarge` : 'Tap image to view in full resolution'}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setIsQuestionImageModalOpen(true)}
+                  className="font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1 text-xs"
+                >
+                  <Maximize2 className="w-3.5 h-3.5" />
+                  <span>Enlarge Diagram</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Optional Instructions */}
         {assignment.instructions && (
@@ -292,6 +357,65 @@ export const StudentAssignmentDetailsPage: React.FC<StudentAssignmentDetailsPage
           setSubmission(newSub);
         }}
       />
+
+      {/* Question Image Fullscreen Modal */}
+      {(assignment.questionImageUrl || questionPages.length > 0) && isQuestionImageModalOpen && (
+        <Modal
+          isOpen={isQuestionImageModalOpen}
+          onClose={() => setIsQuestionImageModalOpen(false)}
+          title={`Question Image / Reference Diagram ${questionPages.length > 1 ? `(Page ${activeQuestionPageIndex + 1} of ${questionPages.length})` : ''}`}
+          subtitle={assignment.title}
+          maxWidth="xl"
+        >
+          <div className="space-y-4">
+            <div className="max-h-[75vh] overflow-auto rounded-xl border border-slate-200 bg-slate-900/5 flex items-center justify-center p-2">
+              <img
+                src={questionPages[activeQuestionPageIndex] || assignment.questionImageUrl}
+                alt={`Question Diagram Page ${activeQuestionPageIndex + 1}`}
+                className="max-h-[70vh] w-auto object-contain rounded-lg"
+              />
+            </div>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between text-xs text-slate-500 pt-2 border-t border-slate-100 gap-2">
+              <span>{assignment.subject} • {assignment.semester} Semester</span>
+              <div className="flex items-center gap-2">
+                {questionPages.length > 1 && (
+                  <div className="flex items-center gap-1.5 mr-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={activeQuestionPageIndex === 0}
+                      onClick={() => setActiveQuestionPageIndex((prev) => Math.max(0, prev - 1))}
+                    >
+                      Previous
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={activeQuestionPageIndex >= questionPages.length - 1}
+                      onClick={() => setActiveQuestionPageIndex((prev) => Math.min(questionPages.length - 1, prev + 1))}
+                    >
+                      Next
+                    </Button>
+                  </div>
+                )}
+                <a
+                  href={questionPages[activeQuestionPageIndex] || assignment.questionImageUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-blue-600 font-semibold hover:underline flex items-center gap-1"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  <span>Open in New Tab</span>
+                </a>
+                <Button size="sm" variant="outline" onClick={() => setIsQuestionImageModalOpen(false)}>
+                  Close
+                </Button>
+              </div>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 };
+

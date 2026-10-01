@@ -71,8 +71,12 @@ export const assignmentService = {
     status?: AssignmentStatus;
     published?: boolean;
     isAdminOverride?: boolean;
+    questionImageUrl?: string;
+    questionImageUrls?: string[];
+    questionImages?: { url: string; publicId?: string; createdAt?: string }[];
+    driveLink?: string;
   }): Promise<{ assignment: Assignment | null; error: string | null }> {
-    const { 
+    let { 
       classItem, 
       teacherId, 
       teacherName, 
@@ -83,8 +87,16 @@ export const assignmentService = {
       maxMarks = 10,
       status = 'published',
       published = true,
-      isAdminOverride = false
+      isAdminOverride = false,
+      questionImageUrl,
+      questionImageUrls,
+      questionImages,
+      driveLink,
     } = params;
+
+    if (!questionImageUrl && questionImageUrls && questionImageUrls.length > 0) {
+      questionImageUrl = questionImageUrls[0];
+    }
 
     const cleanTitle = (title || '').trim();
     const cleanDesc = (description || '').trim();
@@ -130,6 +142,14 @@ export const assignmentService = {
     const nowIso = new Date().toISOString();
 
     const assignmentId = `asg_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    const primaryQuestionImageUrl = questionImageUrl?.trim() || (questionImageUrls && questionImageUrls.length > 0 ? questionImageUrls[0] : undefined);
+    const resolvedQuestionImageUrls = (questionImageUrls && questionImageUrls.length > 0)
+      ? questionImageUrls
+      : (primaryQuestionImageUrl ? [primaryQuestionImageUrl] : undefined);
+    const resolvedQuestionImages = (questionImages && questionImages.length > 0)
+      ? questionImages
+      : (resolvedQuestionImageUrls ? resolvedQuestionImageUrls.map(url => ({ url, createdAt: nowIso })) : undefined);
+
     const newAssignment: Assignment = {
       id: assignmentId,
       classId: classItem.id,
@@ -148,7 +168,10 @@ export const assignmentService = {
       status: finalStatus,
       published: isPublished,
       createdAt: nowIso,
-      updatedAt: nowIso,
+      questionImageUrl: questionImageUrl?.trim() || undefined,
+      questionImageUrls: resolvedQuestionImageUrls,
+      questionImages: resolvedQuestionImages,
+      driveLink: driveLink?.trim() || undefined,
     };
 
     if (isLiveFirebaseConfigured) {
@@ -238,6 +261,35 @@ export const assignmentService = {
       updatedAssignment.published = updates.published;
       if (updates.published && updatedAssignment.status === 'draft') {
         updatedAssignment.status = 'published';
+      }
+    }
+
+    if (updates.questionImageUrl !== undefined) {
+      if (updates.questionImageUrl && updates.questionImageUrl.trim()) {
+        updatedAssignment.questionImageUrl = updates.questionImageUrl.trim();
+        if (!updatedAssignment.questionImageUrls || updatedAssignment.questionImageUrls.length === 0) {
+          updatedAssignment.questionImageUrls = [updates.questionImageUrl.trim()];
+        }
+      } else {
+        delete updatedAssignment.questionImageUrl;
+        delete updatedAssignment.questionImageUrls;
+      }
+    }
+
+    if (updates.questionImageUrls !== undefined) {
+      if (updates.questionImageUrls && updates.questionImageUrls.length > 0) {
+        updatedAssignment.questionImageUrls = updates.questionImageUrls;
+        updatedAssignment.questionImageUrl = updates.questionImageUrls[0];
+      } else {
+        delete updatedAssignment.questionImageUrls;
+      }
+    }
+
+    if (updates.questionImages !== undefined) {
+      if (updates.questionImages && updates.questionImages.length > 0) {
+        updatedAssignment.questionImages = updates.questionImages;
+      } else {
+        delete updatedAssignment.questionImages;
       }
     }
 

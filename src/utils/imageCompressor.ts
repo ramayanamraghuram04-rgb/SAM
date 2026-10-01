@@ -224,3 +224,122 @@ export async function captureAndCompressFromVideo(
   const canvas = captureFrameFromVideo(video, watermark);
   return compressCanvasToBlob(canvas);
 }
+
+/**
+ * Allowed formats for teacher question images
+ */
+export const ALLOWED_QUESTION_IMAGE_TYPES = [
+  'image/jpeg',
+  'image/jpg',
+  'image/png',
+  'image/webp'
+];
+
+export const MAX_QUESTION_IMAGE_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
+
+/**
+ * Validates teacher question image file before processing
+ */
+export function validateQuestionImageFile(file: File | Blob): { isValid: boolean; error?: string } {
+  if (!file) {
+    return { isValid: false, error: 'No image file selected.' };
+  }
+
+  if (file.size > MAX_QUESTION_IMAGE_SIZE_BYTES) {
+    const sizeMb = (file.size / (1024 * 1024)).toFixed(1);
+    return { 
+      isValid: false, 
+      error: `Image is too large (${sizeMb} MB). Maximum allowed size is 10 MB.` 
+    };
+  }
+
+  const type = file.type?.toLowerCase() || '';
+  const isAllowedType = ALLOWED_QUESTION_IMAGE_TYPES.includes(type) || 
+    (file instanceof File && /\.(jpe?g|png|webp)$/i.test(file.name));
+
+  if (!isAllowedType) {
+    return { 
+      isValid: false, 
+      error: 'Please select a JPG, PNG, or WEBP image.' 
+    };
+  }
+
+  return { isValid: true };
+}
+
+/**
+ * Optimizes teacher question image (resizes to max 1600px, preserves sharpness of diagrams/code/math, no watermark)
+ */
+export async function compressQuestionImage(
+  file: File | Blob,
+  maxDimension: number = 1600,
+  quality: number = 0.82
+): Promise<Blob> {
+  const val = validateQuestionImageFile(file);
+  if (!val.isValid) {
+    throw new Error(val.error || 'Invalid question image file');
+  }
+
+  return new Promise<Blob>((resolve) => {
+    // If not in a browser environment, return file directly
+    if (typeof document === 'undefined' || typeof Image === 'undefined') {
+      return resolve(file);
+    }
+
+    const img = new Image();
+    const objectUrl = URL.createObjectURL(file);
+
+    img.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+      let width = img.naturalWidth || img.width;
+      let height = img.naturalHeight || img.height;
+
+      // If dimensions are within maxDimension and file is already under 500KB, return as-is
+      if (width <= maxDimension && height <= maxDimension && file.size <= 500 * 1024) {
+        return resolve(file);
+      }
+
+      // Scale down proportionally if either dimension exceeds maxDimension
+      if (width > maxDimension || height > maxDimension) {
+        if (width > height) {
+          height = Math.round((height * maxDimension) / width);
+          width = maxDimension;
+        } else {
+          width = Math.round((width * maxDimension) / height);
+          height = maxDimension;
+        }
+      }
+
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        return resolve(file);
+      }
+
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(img, 0, 0, width, height);
+
+      const outputMime = file.type === 'image/webp' ? 'image/webp' : 'image/jpeg';
+      canvas.toBlob(
+        (blob) => {
+          if (blob) resolve(blob);
+          else resolve(file);
+        },
+        outputMime,
+        quality
+      );
+    };
+
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      resolve(file);
+    };
+
+    img.src = objectUrl;
+  });
+}
+

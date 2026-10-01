@@ -17,17 +17,14 @@ export const BrandingProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   // Ensure the official best modern SAM favicon is active
   useEffect(() => {
     try {
-      const svg = getLogoSvgString();
-      const encoded = `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
-      
       let link: HTMLLinkElement | null = document.querySelector("link[rel~='icon']");
       if (!link) {
         link = document.createElement('link');
         link.rel = 'icon';
         document.head.appendChild(link);
       }
-      link.type = 'image/svg+xml';
-      link.href = encoded;
+      link.type = 'image/png';
+      link.href = '/logo.png';
     } catch (err) {
       console.warn('Could not set official favicon:', err);
     }

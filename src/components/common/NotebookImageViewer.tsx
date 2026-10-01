@@ -5,9 +5,11 @@ import {
   ZoomIn, 
   ZoomOut, 
   RotateCcw, 
+  RotateCw,
   Maximize2, 
   Image as ImageIcon,
-  ShieldCheck
+  ShieldCheck,
+  CheckCircle2
 } from 'lucide-react';
 import { Button } from './Button';
 
@@ -17,6 +19,9 @@ interface NotebookImageViewerProps {
   studentName?: string;
   studentPIN?: string;
   maxHeight?: string;
+  showDoneButton?: boolean;
+  onPageDone?: (pageIndex: number) => void;
+  donePages?: number[];
 }
 
 export const NotebookImageViewer: React.FC<NotebookImageViewerProps> = ({
@@ -25,13 +30,18 @@ export const NotebookImageViewer: React.FC<NotebookImageViewerProps> = ({
   studentName,
   studentPIN,
   maxHeight = 'max-h-[60vh]',
+  showDoneButton = false,
+  onPageDone,
+  donePages = [],
 }) => {
   const [activePageIndex, setActivePageIndex] = useState<number>(0);
   const [zoomLevel, setZoomLevel] = useState<number>(1);
+  const [rotation, setRotation] = useState<number>(0);
 
-  // Reset zoom on page change
+  // Reset zoom and rotation on page change
   useEffect(() => {
     setZoomLevel(1);
+    setRotation(0);
   }, [activePageIndex]);
 
   // Keyboard navigation (ArrowLeft, ArrowRight)
@@ -68,11 +78,29 @@ export const NotebookImageViewer: React.FC<NotebookImageViewerProps> = ({
 
   const handleResetZoom = () => {
     setZoomLevel(1);
+    setRotation(0);
+  };
+
+  const handleRotateCw = () => {
+    setRotation((r) => (r + 90) % 360);
+  };
+
+  const handleRotateCcw = () => {
+    setRotation((r) => (r - 90 + 360) % 360);
   };
 
   const handleOpenOriginal = () => {
     if (currentUrl) {
       window.open(currentUrl, '_blank', 'noopener,noreferrer');
+    }
+  };
+
+  const handleDoneClick = () => {
+    if (onPageDone) {
+      onPageDone(activePageIndex);
+    }
+    if (activePageIndex < totalPages - 1) {
+      setActivePageIndex((p) => p + 1);
     }
   };
 
@@ -129,6 +157,26 @@ export const NotebookImageViewer: React.FC<NotebookImageViewerProps> = ({
             </button>
           </div>
 
+          {/* Rotate Controls */}
+          <div className="flex items-center bg-slate-100 rounded-lg p-0.5 border border-slate-200 text-xs">
+            <button
+              type="button"
+              onClick={handleRotateCcw}
+              className="p-1 text-slate-600 hover:text-slate-900 hover:bg-white rounded transition-colors"
+              title="Rotate Counter-Clockwise (90°)"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={handleRotateCw}
+              className="p-1 text-slate-600 hover:text-slate-900 hover:bg-white rounded transition-colors"
+              title="Rotate Clockwise (90°)"
+            >
+              <RotateCw className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
           {/* Open Original in New Tab */}
           <button
             type="button"
@@ -151,6 +199,19 @@ export const NotebookImageViewer: React.FC<NotebookImageViewerProps> = ({
             Prev
           </Button>
 
+          {showDoneButton && (
+            <Button
+              type="button"
+              variant="primary"
+              size="sm"
+              onClick={handleDoneClick}
+              leftIcon={<CheckCircle2 className="w-3.5 h-3.5" />}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
+            >
+              {activePageIndex < totalPages - 1 ? 'Done & Next' : 'Done'}
+            </Button>
+          )}
+
           <Button
             type="button"
             variant="outline"
@@ -170,7 +231,7 @@ export const NotebookImageViewer: React.FC<NotebookImageViewerProps> = ({
       >
         <div 
           className="transition-transform duration-150 ease-out flex items-center justify-center"
-          style={{ transform: `scale(${zoomLevel})` }}
+          style={{ transform: `scale(${zoomLevel}) rotate(${rotation}deg)` }}
         >
           <img
             src={currentUrl}
@@ -207,6 +268,11 @@ export const NotebookImageViewer: React.FC<NotebookImageViewerProps> = ({
                 className="w-full h-full object-cover"
                 loading="lazy"
               />
+              {donePages.includes(idx) && (
+                <span className="absolute top-1 right-1 bg-emerald-600 text-white rounded-full p-0.5 shadow-xs">
+                  <CheckCircle2 className="w-2.5 h-2.5" />
+                </span>
+              )}
               <span className="absolute bottom-0 inset-x-0 bg-black/70 text-white text-[9px] font-bold text-center py-0.5">
                 P{idx + 1}
               </span>

@@ -8,7 +8,10 @@ import {
   Clock, 
   ArrowRight,
   BookOpen,
-  UserPlus
+  UserPlus,
+  Camera,
+  Upload,
+  Sparkles
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { ClassItem, Assignment, Submission, Semester } from '../../types';
@@ -46,6 +49,12 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
   const [isInviteOpen, setIsInviteOpen] = useState<boolean>(false);
   const [selectedClassForInvite, setSelectedClassForInvite] = useState<ClassItem | null>(null);
   const [isCreateAssignmentOpen, setIsCreateAssignmentOpen] = useState<boolean>(false);
+  const [initialAttachmentMode, setInitialAttachmentMode] = useState<'camera' | 'upload' | 'drive' | null>(null);
+
+  const handleOpenCreateAssignment = (mode: 'camera' | 'upload' | 'drive' | 'standard' = 'standard') => {
+    setInitialAttachmentMode(mode === 'standard' ? null : mode);
+    setIsCreateAssignmentOpen(true);
+  };
 
   const loadData = async () => {
     if (!user?.uid) return;
@@ -105,7 +114,7 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button
             variant="secondary"
             size="md"
@@ -119,8 +128,30 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
           <Button
             variant="primary"
             size="md"
+            leftIcon={<Camera className="w-4 h-4" />}
+            onClick={() => handleOpenCreateAssignment('camera')}
+            disabled={classes.length === 0}
+            className="bg-blue-500/80 hover:bg-blue-500 border border-white/30 text-white shadow-sm"
+          >
+            Camera Scan
+          </Button>
+
+          <Button
+            variant="primary"
+            size="md"
+            leftIcon={<Upload className="w-4 h-4" />}
+            onClick={() => handleOpenCreateAssignment('upload')}
+            disabled={classes.length === 0}
+            className="bg-indigo-500/80 hover:bg-indigo-500 border border-white/30 text-white shadow-sm"
+          >
+            Upload Question
+          </Button>
+
+          <Button
+            variant="primary"
+            size="md"
             leftIcon={<FileText className="w-4 h-4" />}
-            onClick={() => setIsCreateAssignmentOpen(true)}
+            onClick={() => handleOpenCreateAssignment('standard')}
             disabled={classes.length === 0}
             className="bg-blue-900/60 hover:bg-blue-900 border border-white/20 text-white"
           >
@@ -157,6 +188,127 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
           <div className="text-2xl font-black text-slate-900">{assignments.length}</div>
           <p className="text-[11px] text-slate-500 mt-0.5">Active notebook questions</p>
         </Card>
+      </div>
+
+      {/* Assignment Quick Launch Hub: Camera Section & Upload Option */}
+      <div className="bg-white rounded-3xl border border-slate-200/90 p-5 sm:p-6 shadow-xs space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200/60">
+                Assignment Creation & Upload
+              </span>
+            </div>
+            <h2 className="text-lg font-black text-slate-900 tracking-tight mt-1 flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-blue-600" />
+              <span>Create or Upload Assignment</span>
+            </h2>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Choose how you want to provide question materials for students to write in their notebooks
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2 self-start sm:self-auto">
+            <span className="text-xs font-semibold text-slate-500 bg-slate-100 px-3 py-1 rounded-xl">
+              {classes.length} Authorized {classes.length === 1 ? 'Class' : 'Classes'}
+            </span>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+          {/* Card 1: Camera Capture Section */}
+          <div 
+            onClick={() => classes.length > 0 && handleOpenCreateAssignment('camera')}
+            className={`group p-4 rounded-2xl border-2 border-dashed transition-all text-left ${
+              classes.length === 0 
+                ? 'border-slate-200 bg-slate-50/50 opacity-60 cursor-not-allowed'
+                : 'border-blue-300 hover:border-blue-600 bg-blue-50/40 hover:bg-blue-50/80 cursor-pointer shadow-xs hover:shadow-md'
+            }`}
+          >
+            <div className="flex items-start gap-3.5">
+              <div className="w-12 h-12 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform shadow-xs">
+                <Camera className="w-6 h-6" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <h3 className="text-sm font-bold text-blue-950">Camera Capture</h3>
+                  <span className="text-[10px] font-extrabold uppercase px-1.5 py-0.2 rounded bg-blue-600 text-white">
+                    Live
+                  </span>
+                </div>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  Snap question paper, textbook page, handwritten notes, or blackboard directly with camera.
+                </p>
+                <div className="mt-3 flex items-center gap-1 text-xs font-bold text-blue-600 group-hover:text-blue-700">
+                  <span>Open Camera Viewfinder</span>
+                  <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Card 2: Upload File Option */}
+          <div 
+            onClick={() => classes.length > 0 && handleOpenCreateAssignment('upload')}
+            className={`group p-4 rounded-2xl border-2 border-dashed transition-all text-left ${
+              classes.length === 0 
+                ? 'border-slate-200 bg-slate-50/50 opacity-60 cursor-not-allowed'
+                : 'border-indigo-300 hover:border-indigo-600 bg-indigo-50/40 hover:bg-indigo-50/80 cursor-pointer shadow-xs hover:shadow-md'
+            }`}
+          >
+            <div className="flex items-start gap-3.5">
+              <div className="w-12 h-12 rounded-xl bg-indigo-600 text-white flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform shadow-xs">
+                <Upload className="w-6 h-6" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <h3 className="text-sm font-bold text-indigo-950">Upload Question File</h3>
+                  <span className="text-[10px] font-extrabold uppercase px-1.5 py-0.2 rounded bg-indigo-100 text-indigo-800">
+                    File
+                  </span>
+                </div>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  Select or drag-and-drop JPG, PNG, or WEBP question diagram/document from your device.
+                </p>
+                <div className="mt-3 flex items-center gap-1 text-xs font-bold text-indigo-600 group-hover:text-indigo-700">
+                  <span>Browse Device Files</span>
+                  <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Card 3: Standard Creation Form */}
+          <div 
+            onClick={() => classes.length > 0 && handleOpenCreateAssignment('standard')}
+            className={`group p-4 rounded-2xl border border-slate-200/90 hover:border-slate-300 transition-all text-left ${
+              classes.length === 0 
+                ? 'bg-slate-50/50 opacity-60 cursor-not-allowed'
+                : 'bg-slate-50/80 hover:bg-slate-100/80 cursor-pointer shadow-xs hover:shadow-md'
+            }`}
+          >
+            <div className="flex items-start gap-3.5">
+              <div className="w-12 h-12 rounded-xl bg-slate-800 text-white flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform shadow-xs">
+                <FileText className="w-6 h-6" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <h3 className="text-sm font-bold text-slate-900">Standard Assignment</h3>
+                  <span className="text-[10px] font-extrabold uppercase px-1.5 py-0.2 rounded bg-slate-200 text-slate-700">
+                    Full Form
+                  </span>
+                </div>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  Type questions directly, define due dates, max marks (default 10), and instructions.
+                </p>
+                <div className="mt-3 flex items-center gap-1 text-xs font-bold text-slate-700 group-hover:text-slate-900">
+                  <span>Create Assignment</span>
+                  <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Semester Tabs Section */}
@@ -334,9 +486,13 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
 
       <CreateAssignmentModal
         isOpen={isCreateAssignmentOpen}
-        onClose={() => setIsCreateAssignmentOpen(false)}
+        onClose={() => {
+          setIsCreateAssignmentOpen(false);
+          setInitialAttachmentMode(null);
+        }}
         classes={classes}
         onAssignmentCreated={handleAssignmentCreated}
+        initialAttachmentMode={initialAttachmentMode}
       />
     </div>
   );

@@ -171,5 +171,11 @@ service cloud.firestore {
       allow update: if isAdmin() || (isAuthenticated() && resource.data.recipientUid == request.auth.uid);
       allow delete: if isAdmin();
     }
+
+    // 11. Teacher Digital Annotations (Section 15 & 23 - Separated from student submission)
+    match /submissionAnnotations/{submissionId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin() || isStaff();
+    }
   }
 }

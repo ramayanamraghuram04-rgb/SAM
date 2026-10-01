@@ -13,6 +13,8 @@ export const CLOUDINARY_UPLOAD_PRESET =
   (env.VITE_CLOUDINARY_UPLOAD_PRESET || 'SAM-SMART ASSIGNMENT MANAGER').trim();
 
 export const CLOUDINARY_DEFAULT_FOLDER = 'sam/assignments';
+// Separate folder for teacher assignment/question images (CLOUDINARY_QUESTIONS_FOLDER = 'sam/questions' legacy alias)
+export const CLOUDINARY_QUESTIONS_FOLDER = 'sam/assignments/questions';
 
 // Maximum upload file size: 15MB
 export const MAX_FILE_SIZE_BYTES = 15 * 1024 * 1024;
@@ -259,5 +261,23 @@ export const cloudinaryService = {
         error: err?.message || String(err)
       };
     }
+  },
+
+  /**
+   * Dedicated upload pipeline for Teacher Question Photos/Diagrams
+   * Saves strictly under 'sam/questions' to keep teacher questions isolated from student submissions.
+   */
+  async uploadQuestionImage(
+    file: Blob | File,
+    options: Omit<UploadOptions, 'folder'> = {}
+  ): Promise<CloudinaryUploadResult> {
+    const rawName = file instanceof File ? file.name : `question_${Date.now()}.jpg`;
+    const cleanFileName = `question_${Date.now()}_${rawName.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+
+    return this.uploadImage(file, {
+      ...options,
+      folder: CLOUDINARY_QUESTIONS_FOLDER,
+      fileName: options.fileName || cleanFileName,
+    });
   }
 };

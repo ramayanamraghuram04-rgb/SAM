@@ -139,6 +139,16 @@ export interface Assignment {
   published?: boolean; // true if published to students, false if draft
   createdAt: string;
   updatedAt?: string;
+  questionImageUrl?: string; // Cloudinary secure_url for optional teacher question photo/diagram (first page)
+  questionImageUrls?: string[]; // Cloudinary secure_urls for all captured question pages (multi-page support)
+  questionImages?: QuestionImageItem[]; // Metadata array for captured teacher question images
+  driveLink?: string; // Optional Google Drive reference/question link
+}
+
+export interface QuestionImageItem {
+  url: string;
+  publicId?: string;
+  createdAt?: string;
 }
 
 export type SubmissionStatus = 'not_submitted' | 'submitted' | 'under_review' | 'checked' | 'returned';
@@ -258,3 +268,42 @@ export interface CloudinaryUploadResult {
   created_at?: string;
   original_filename?: string;
 }
+
+// ==========================================
+// Digital Annotation Types (Section 4 & 15)
+// ==========================================
+export interface AnnotationPoint {
+  x: number; // Normalized coordinate 0.0 - 1.0 relative to image width
+  y: number; // Normalized coordinate 0.0 - 1.0 relative to image height
+}
+
+export interface AnnotationStroke {
+  id: string;
+  points: AnnotationPoint[];
+  color: string;
+  thickness: number;
+  tool: 'pen' | 'eraser';
+}
+
+export interface AnnotationText {
+  id: string;
+  x: number; // Normalized coordinate 0.0 - 1.0
+  y: number; // Normalized coordinate 0.0 - 1.0
+  text: string;
+  color: string;
+  fontSize?: number;
+}
+
+export interface PageAnnotation {
+  pageIndex: number;
+  strokes: AnnotationStroke[];
+  texts: AnnotationText[];
+}
+
+export interface SubmissionAnnotations {
+  submissionId: string;
+  teacherId: string;
+  pages: PageAnnotation[];
+  updatedAt: string;
+}
+

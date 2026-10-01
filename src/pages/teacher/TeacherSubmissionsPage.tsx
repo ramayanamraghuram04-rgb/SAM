@@ -378,7 +378,10 @@ export const TeacherSubmissionsPage: React.FC = () => {
           isOpen={Boolean(activeSubmission)}
           onClose={() => setActiveSubmission(null)}
           submission={activeSubmission}
+          submissions={filteredSubmissions}
+          onNavigate={(targetSub) => setActiveSubmission(targetSub)}
           maxMarks={assignments.find((a) => a.id === activeSubmission.assignmentId)?.maxMarks || 10}
+          subjectName={assignments.find((a) => a.id === activeSubmission.assignmentId)?.subject}
           onGraded={handleGraded}
         />
       )}

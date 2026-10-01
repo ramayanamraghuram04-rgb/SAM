@@ -7,17 +7,21 @@ import {
   Clock, 
   ExternalLink, 
   Users,
-  Edit3
+  Edit3,
+  Image as ImageIcon,
+  Maximize2
 } from 'lucide-react';
 import { Assignment, Submission, ClassMember } from '../../types';
 import { submissionService } from '../../services/submissionService';
 import { classService } from '../../services/classService';
 import { Card } from '../../components/common/Card';
 import { Button } from '../../components/common/Button';
+import { Modal } from '../../components/common/Modal';
 import { SemesterBadge, SubmissionStatusBadge } from '../../components/common/Badge';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { EmptyState } from '../../components/common/EmptyState';
 import { GradeSubmissionModal } from '../../components/teacher/GradeSubmissionModal';
+import { CreateAssignmentModal } from '../../components/teacher/CreateAssignmentModal';
 import { SubmissionCard } from '../../components/teacher/SubmissionCard';
 import { formatDate } from '../../utils/dateUtils';
 
@@ -27,14 +31,22 @@ interface TeacherAssignmentDetailsPageProps {
 }
 
 export const TeacherAssignmentDetailsPage: React.FC<TeacherAssignmentDetailsPageProps> = ({
-  assignment,
+  assignment: initialAssignment,
   onBack,
 }) => {
+  const [assignment, setAssignment] = useState<Assignment>(initialAssignment);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [enrolledStudents, setEnrolledStudents] = useState<ClassMember[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [activeGradingSubmission, setActiveGradingSubmission] = useState<Submission | null>(null);
+  const [isQuestionImageModalOpen, setIsQuestionImageModalOpen] = useState<boolean>(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState<boolean>(false);
+  const [activeQuestionPageIndex, setActiveQuestionPageIndex] = useState<number>(0);
+
+  const questionPages = (assignment.questionImageUrls && assignment.questionImageUrls.length > 0)
+    ? assignment.questionImageUrls
+    : (assignment.questionImageUrl ? [assignment.questionImageUrl] : []);
 
   const fetchData = async () => {
     try {
@@ -92,6 +104,14 @@ export const TeacherAssignmentDetailsPage: React.FC<TeacherAssignmentDetailsPage
           </div>
 
           <div className="flex items-center gap-3">
+            <Button
+              size="sm"
+              variant="outline"
+              leftIcon={<Edit3 className="w-3.5 h-3.5" />}
+              onClick={() => setIsEditModalOpen(true)}
+            >
+              Edit Assignment
+            </Button>
             <span className="text-sm font-extrabold text-blue-700 bg-blue-50 px-3 py-1.5 rounded-xl border border-blue-200">
               Maximum: {assignment.maxMarks} Marks
             </span>
@@ -107,6 +127,61 @@ export const TeacherAssignmentDetailsPage: React.FC<TeacherAssignmentDetailsPage
             {assignment.description}
           </p>
         </div>
+
+        {/* Attached Question Image */}
+        {assignment.questionImageUrl && (
+          <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/70 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+                <ImageIcon className="w-3.5 h-3.5 text-blue-600" />
+                <span>Question Image / Attached Diagram</span>
+              </span>
+              <div className="flex items-center gap-2">
+                {questionPages.length > 1 && (
+                  <span className="text-[10px] font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200">
+                    {questionPages.length} Pages
+                  </span>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setIsQuestionImageModalOpen(true)}
+                  className="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1 cursor-pointer"
+                >
+                  <Maximize2 className="w-3 h-3" />
+                  <span>Enlarge</span>
+                </button>
+              </div>
+            </div>
+
+            {questionPages.length > 1 && (
+              <div className="flex items-center gap-2 overflow-x-auto pb-1">
+                {questionPages.map((_url, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => setActiveQuestionPageIndex(idx)}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                      activeQuestionPageIndex === idx
+                        ? 'border-blue-600 bg-blue-600 text-white shadow-xs'
+                        : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
+                    }`}
+                  >
+                    <span>Page {idx + 1}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            <div className="relative overflow-hidden rounded-xl border border-slate-200 bg-white">
+              <img
+                src={questionPages[activeQuestionPageIndex] || assignment.questionImageUrl}
+                alt="Question Diagram"
+                className="w-full max-h-[350px] object-contain cursor-pointer hover:opacity-95"
+                onClick={() => setIsQuestionImageModalOpen(true)}
+              />
+            </div>
+          </div>
+        )}
 
         <div className="flex items-center gap-4 text-xs text-slate-500 pt-2 border-t border-slate-100">
           <div className="flex items-center gap-1.5">
@@ -219,10 +294,85 @@ export const TeacherAssignmentDetailsPage: React.FC<TeacherAssignmentDetailsPage
           isOpen={Boolean(activeGradingSubmission)}
           onClose={() => setActiveGradingSubmission(null)}
           submission={activeGradingSubmission}
+          submissions={filteredSubmissions}
+          onNavigate={(targetSub) => setActiveGradingSubmission(targetSub)}
           maxMarks={assignment.maxMarks}
+          subjectName={assignment.subject}
           onGraded={handleGraded}
         />
+      )}
+
+      {/* Edit Assignment Modal */}
+      {isEditModalOpen && (
+        <CreateAssignmentModal
+          isOpen={isEditModalOpen}
+          onClose={() => setIsEditModalOpen(false)}
+          editingAssignment={assignment}
+          onAssignmentCreated={(updatedAsg) => {
+            setAssignment(updatedAsg);
+            setIsEditModalOpen(false);
+          }}
+        />
+      )}
+
+      {/* Question Image Modal */}
+      {(assignment.questionImageUrl || questionPages.length > 0) && isQuestionImageModalOpen && (
+        <Modal
+          isOpen={isQuestionImageModalOpen}
+          onClose={() => setIsQuestionImageModalOpen(false)}
+          title={`Question Image / Reference Diagram ${questionPages.length > 1 ? `(Page ${activeQuestionPageIndex + 1} of ${questionPages.length})` : ''}`}
+          subtitle={assignment.title}
+          maxWidth="xl"
+        >
+          <div className="space-y-4">
+            <div className="max-h-[75vh] overflow-auto rounded-xl border border-slate-200 bg-slate-900/5 flex items-center justify-center p-2">
+              <img
+                src={questionPages[activeQuestionPageIndex] || assignment.questionImageUrl}
+                alt="Question Diagram Full"
+                className="max-h-[70vh] w-auto object-contain rounded-lg"
+              />
+            </div>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between text-xs text-slate-500 pt-2 border-t border-slate-100 gap-2">
+              <span>{assignment.subject} • {assignment.semester} Semester</span>
+              <div className="flex items-center gap-2">
+                {questionPages.length > 1 && (
+                  <div className="flex items-center gap-1.5 mr-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={activeQuestionPageIndex === 0}
+                      onClick={() => setActiveQuestionPageIndex((prev) => Math.max(0, prev - 1))}
+                    >
+                      Previous
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={activeQuestionPageIndex >= questionPages.length - 1}
+                      onClick={() => setActiveQuestionPageIndex((prev) => Math.min(questionPages.length - 1, prev + 1))}
+                    >
+                      Next
+                    </Button>
+                  </div>
+                )}
+                <a
+                  href={questionPages[activeQuestionPageIndex] || assignment.questionImageUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-blue-600 font-semibold hover:underline flex items-center gap-1"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  <span>Open in New Tab</span>
+                </a>
+                <Button size="sm" variant="outline" onClick={() => setIsQuestionImageModalOpen(false)}>
+                  Close
+                </Button>
+              </div>
+            </div>
+          </div>
+        </Modal>
       )}
     </div>
   );
 };
+

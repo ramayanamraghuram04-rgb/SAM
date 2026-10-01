@@ -14,7 +14,8 @@ import {
   Subject,
   TeachingAssignment,
   UserRole,
-  VerificationCodeRecord
+  VerificationCodeRecord,
+  SubmissionAnnotations
 } from '../types';
 
 const STORAGE_KEYS = {
@@ -28,6 +29,7 @@ const STORAGE_KEYS = {
   SUBJECTS: 'sam_subjects',
   TEACHING_ASSIGNMENTS: 'sam_teaching_assignments',
   VERIFICATION_CODES: 'sam_verification_codes',
+  ANNOTATIONS: 'sam_submission_annotations',
   CURRENT_SESSION: 'sam_current_auth_session',
 };
 
@@ -335,5 +337,30 @@ export const MockStore = {
       list.push(record);
     }
     saveList(STORAGE_KEYS.VERIFICATION_CODES, list);
+  },
+
+  // Submission Annotations (Section 15)
+  getAllAnnotations(): SubmissionAnnotations[] {
+    return getList<SubmissionAnnotations>(STORAGE_KEYS.ANNOTATIONS);
+  },
+
+  getAnnotations(submissionId: string): SubmissionAnnotations | undefined {
+    return this.getAllAnnotations().find((a) => a.submissionId === submissionId);
+  },
+
+  saveAnnotations(record: SubmissionAnnotations): void {
+    const list = this.getAllAnnotations();
+    const idx = list.findIndex((a) => a.submissionId === record.submissionId);
+    if (idx >= 0) {
+      list[idx] = record;
+    } else {
+      list.push(record);
+    }
+    saveList(STORAGE_KEYS.ANNOTATIONS, list);
+  },
+
+  deleteAnnotations(submissionId: string): void {
+    const list = this.getAllAnnotations().filter((a) => a.submissionId !== submissionId);
+    saveList(STORAGE_KEYS.ANNOTATIONS, list);
   },
 };

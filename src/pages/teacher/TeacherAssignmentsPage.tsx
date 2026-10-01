@@ -13,7 +13,9 @@ import {
   Edit,
   Send,
   Lock,
-  Archive
+  Archive,
+  Camera,
+  Upload
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { Assignment, ClassItem } from '../../types';
@@ -43,6 +45,7 @@ export const TeacherAssignmentsPage: React.FC<TeacherAssignmentsPageProps> = ({
   const [filterClassId, setFilterClassId] = useState<string>('all');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState<boolean>(false);
   const [editingAssignment, setEditingAssignment] = useState<Assignment | null>(null);
+  const [initialAttachmentMode, setInitialAttachmentMode] = useState<'camera' | 'upload' | 'drive' | null>(null);
 
   const fetchData = async () => {
     if (!user?.uid) return;
@@ -117,18 +120,49 @@ export const TeacherAssignmentsPage: React.FC<TeacherAssignmentsPageProps> = ({
           </p>
         </div>
 
-        <Button
-          variant="primary"
-          size="md"
-          leftIcon={<Plus className="w-4 h-4" />}
-          disabled={classes.length === 0}
-          onClick={() => {
-            setEditingAssignment(null);
-            setIsCreateModalOpen(true);
-          }}
-        >
-          Create Assignment
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            variant="outline"
+            size="md"
+            leftIcon={<Camera className="w-4 h-4 text-blue-600" />}
+            disabled={classes.length === 0}
+            onClick={() => {
+              setEditingAssignment(null);
+              setInitialAttachmentMode('camera');
+              setIsCreateModalOpen(true);
+            }}
+          >
+            Camera Scan
+          </Button>
+
+          <Button
+            variant="outline"
+            size="md"
+            leftIcon={<Upload className="w-4 h-4 text-indigo-600" />}
+            disabled={classes.length === 0}
+            onClick={() => {
+              setEditingAssignment(null);
+              setInitialAttachmentMode('upload');
+              setIsCreateModalOpen(true);
+            }}
+          >
+            Upload Question
+          </Button>
+
+          <Button
+            variant="primary"
+            size="md"
+            leftIcon={<Plus className="w-4 h-4" />}
+            disabled={classes.length === 0}
+            onClick={() => {
+              setEditingAssignment(null);
+              setInitialAttachmentMode(null);
+              setIsCreateModalOpen(true);
+            }}
+          >
+            Create Assignment
+          </Button>
+        </div>
       </div>
 
       {/* Filters & Search */}
@@ -334,9 +368,11 @@ export const TeacherAssignmentsPage: React.FC<TeacherAssignmentsPageProps> = ({
         onClose={() => {
           setIsCreateModalOpen(false);
           setEditingAssignment(null);
+          setInitialAttachmentMode(null);
         }}
         classes={classes}
         editingAssignment={editingAssignment}
+        initialAttachmentMode={initialAttachmentMode}
         onAssignmentCreated={(savedAsg) => {
           setAssignments((prev) => {
             const idx = prev.findIndex((a) => a.id === savedAsg.id);
