@@ -1,11 +1,13 @@
 // SAM PWA Service Worker - Safe UI shell caching
-const CACHE_NAME = 'sam-v1.0.2';
+const CACHE_NAME = 'sam-v1.0.3';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
   '/manifest.webmanifest',
   '/manifest.json',
   '/favicon.svg',
+  '/logo.png',
+  '/logo-solid.png',
   '/pwa-192x192.png',
   '/pwa-512x512.png',
   '/maskable-icon-512x512.png',
