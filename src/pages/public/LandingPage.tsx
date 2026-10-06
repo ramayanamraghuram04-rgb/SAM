@@ -1,6 +1,5 @@
 import React from 'react';
 import { 
-  Shield, 
   ArrowRight, 
   UserCheck, 
   FileText, 
@@ -8,7 +7,6 @@ import {
   CheckCircle2,
   Sparkles
 } from 'lucide-react';
-import { Button } from '../../components/common/Button';
 import { AdminSticker } from '../../components/illustrations/AdminSticker';
 import { TeacherSticker } from '../../components/illustrations/TeacherSticker';
 import { StudentSticker } from '../../components/illustrations/StudentSticker';
@@ -22,11 +20,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGoToLogin }) => {
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-[#0F172A] flex flex-col justify-between selection:bg-[#2563EB] selection:text-white">
       
-      {/* 2. TOP HEADER - Compact, Professional, Fixed Height (14/16) */}
+      {/* 2. TOP HEADER - Clean, Minimal Brand Header */}
       <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-[#E2E8F0] shadow-xs">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-15 flex items-center justify-between">
-          
-          {/* Left: SAM Logo, Name, Subtitle */}
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-15 flex items-center">
+          {/* SAM Logo, Name, Subtitle */}
           <div className="flex items-center gap-3">
             <div className="shrink-0">
               <SamLogo size="md" className="shadow-sm shadow-blue-500/20" />
@@ -40,42 +37,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGoToLogin }) => {
               </p>
             </div>
           </div>
-
-          {/* Right: Role Navigation Buttons */}
-          <nav className="flex items-center gap-1.5 sm:gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onGoToLogin('admin')}
-              leftIcon={<Shield className="w-3.5 h-3.5 text-[#64748B]" />}
-              className="text-xs font-semibold px-2.5 sm:px-3 border-[#E2E8F0] hover:bg-slate-50 hover:text-[#0F172A]"
-            >
-              Admin
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onGoToLogin('staff')}
-              className="text-xs font-semibold px-2.5 sm:px-3 border-[#E2E8F0] hover:bg-slate-50 hover:text-[#0F172A]"
-            >
-              Staff
-            </Button>
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={() => onGoToLogin('student')}
-              className="text-xs font-semibold px-3 sm:px-3.5 bg-[#2563EB] hover:bg-blue-700 text-white shadow-xs"
-            >
-              Student
-            </Button>
-          </nav>
         </div>
       </header>
 
       {/* Main Content Area */}
       <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-8 sm:py-14 space-y-12 sm:space-y-16">
         
-        {/* 3. HERO SECTION - Clean, Balanced, No Huge Empty Spaces, No Excessive Gradients */}
+        {/* 3. HERO SECTION - Clean, Balanced, No Huge Empty Spaces */}
         <section className="text-center space-y-4 max-w-3xl mx-auto pt-2 sm:pt-4">
           
           {/* Small Badge */}
@@ -85,13 +53,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGoToLogin }) => {
           </div>
 
           {/* Main Heading */}
-          <h1 className="text-3xl sm:text-5xl font-extrabold text-[#0F172A] tracking-tight leading-[1.15] sm:leading-[1.15]">
-            Assignment Management, <span className="text-[#2563EB]">Simplified.</span>
+          <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight leading-[1.15] sm:leading-[1.15]">
+            <span className="text-[#2563EB]">One Place.</span>{' '}
+            <span className="text-[#0F172A]">Every Assignment.</span>
           </h1>
 
           {/* Supporting Text */}
           <p className="text-sm sm:text-base text-[#64748B] max-w-2xl mx-auto leading-relaxed font-normal">
-            Create assignments, submit work, review submissions and manage academic progress — all in one place.
+            A simple and smart platform to create, submit, review, and manage assignments — all in one place.
           </p>
         </section>
 
