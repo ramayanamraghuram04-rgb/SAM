@@ -6,7 +6,8 @@ import {
   LogOut, 
   ShieldCheck, 
   Calendar,
-  BookOpen
+  BookOpen,
+  KeyRound
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { ClassItem } from '../../types';
@@ -16,6 +17,7 @@ import { Button } from '../../components/common/Button';
 import { SemesterBadge } from '../../components/common/Badge';
 import { formatDate } from '../../utils/dateUtils';
 import { DEPARTMENT, DEPARTMENT_FULL } from '../../config/constants';
+import { openChangePasswordDialog } from '../../components/layout/AppLayout';
 
 export const TeacherProfilePage: React.FC = () => {
   const { user, teacherUser, logout } = useAuth();
@@ -107,6 +109,34 @@ export const TeacherProfilePage: React.FC = () => {
               ))}
             </div>
           )}
+        </div>
+
+        {/* Account Security & Password */}
+        <div className="pt-4 border-t border-slate-100 space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-2xl bg-gradient-to-r from-blue-50/60 to-indigo-50/60 border border-blue-200/80">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-xs shrink-0">
+                <KeyRound className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-slate-900">Account Security & Credentials</h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Update your faculty portal login password securely
+                </p>
+              </div>
+            </div>
+
+            <Button
+              id="teacher-profile-change-password-btn"
+              variant="outline"
+              size="sm"
+              leftIcon={<KeyRound className="w-4 h-4 text-blue-600" />}
+              onClick={openChangePasswordDialog}
+              className="border-blue-300 text-blue-700 bg-white hover:bg-blue-50 shadow-xs shrink-0"
+            >
+              Change Password
+            </Button>
+          </div>
         </div>
 
         {/* Logout Button */}

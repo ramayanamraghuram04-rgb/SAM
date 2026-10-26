@@ -8,7 +8,8 @@ import {
   ArrowRight, 
   Mail, 
   CheckCircle2, 
-  Calendar 
+  Calendar,
+  KeyRound 
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { Assignment, Submission, ClassMember, Invitation } from '../../types';
@@ -26,6 +27,7 @@ import { AssignmentCard } from '../../components/student/AssignmentCard';
 import { SubmitAssignmentModal } from '../../components/student/SubmitAssignmentModal';
 import { formatDate } from '../../utils/dateUtils';
 import { DEPARTMENT } from '../../config/constants';
+import { openChangePasswordDialog } from '../../components/layout/AppLayout';
 
 interface StudentDashboardProps {
   onNavigateTab: (tab: string) => void;
@@ -133,6 +135,17 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
             <BookOpen className="w-4 h-4 text-blue-600" />
             <span className="font-extrabold text-blue-700 tracking-wide">My Assignments</span>
             <ArrowRight className="w-4 h-4 text-blue-500" />
+          </button>
+
+          <button
+            type="button"
+            id="student-dashboard-change-password-btn"
+            onClick={openChangePasswordDialog}
+            className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-white/15 hover:bg-white/25 text-white font-bold text-xs backdrop-blur-xs transition-all active:scale-[0.98] cursor-pointer border border-white/20"
+            title="Change your login password"
+          >
+            <KeyRound className="w-3.5 h-3.5" />
+            <span>Change Password</span>
           </button>
         </div>
       </div>

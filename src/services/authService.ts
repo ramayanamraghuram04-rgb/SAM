@@ -3,6 +3,8 @@ import {
   signInWithEmailAndPassword, 
   signOut,
   updatePassword,
+  reauthenticateWithCredential,
+  EmailAuthProvider,
   User as FirebaseUser,
   getAuth
 } from 'firebase/auth';
@@ -23,6 +25,7 @@ import { auth, db, firebaseConfig, isLiveFirebaseConfigured } from '../config/fi
 import { AppUser, AdminUser, StaffUser, StudentUser, Department, Semester, UserStatus } from '../types';
 import { isValidIndianMobile, cleanPhoneNumber, teacherPhoneToEmail } from '../utils/phoneValidator';
 import { isValidStudentPIN, normalizePIN, studentPinToEmail } from '../utils/pinValidator';
+import { validatePasswordChange } from '../utils/passwordValidator';
 import { MockStore } from './mockStorage';
 import { academicService } from './academicService';
 
@@ -514,6 +517,7 @@ export const authService = {
           mobile: cleanMobile,
           department: DEPARTMENT,
           status: 'active',
+          mustChangePassword: true,
           assignedSubjects: teachingAssignments.map((t) => t.subjectName),
           assignedSemesters: Array.from(new Set(teachingAssignments.map((t) => t.semester))),
           createdAt: new Date().toISOString(),
@@ -581,6 +585,7 @@ export const authService = {
         mobile: cleanMobile,
         department: DEPARTMENT,
         status: 'active',
+        mustChangePassword: true,
         assignedSubjects: teachingAssignments.map((t) => t.subjectName),
         assignedSemesters: Array.from(new Set(teachingAssignments.map((t) => t.semester))),
         createdAt: new Date().toISOString(),
@@ -680,6 +685,7 @@ export const authService = {
           semester,
           department: DEPARTMENT,
           status: 'active',
+          mustChangePassword: true,
           createdAt: new Date().toISOString(),
         };
 
@@ -729,6 +735,7 @@ export const authService = {
         semester,
         department: DEPARTMENT,
         status: 'active',
+        mustChangePassword: true,
         createdAt: new Date().toISOString(),
       };
 
@@ -1060,6 +1067,164 @@ export const authService = {
   },
 
   /**
+   * Secure Password Update for Students and Teachers
+   * Reauthenticates with Firebase Auth using current password and synthetic email,
+   * then updates the actual authentication password.
+   * Clears mustChangePassword flag on success.
+   */
+  async changePassword(params: {
+    currentPassword: string;
+    newPassword: string;
+    confirmPassword?: string;
+  }): Promise<{ success: boolean; error: string | null }> {
+    const { currentPassword, newPassword, confirmPassword } = params;
+
+    // 1. Validation using password policy
+    if (confirmPassword !== undefined) {
+      const validation = validatePasswordChange({
+        currentPassword,
+        newPassword,
+        confirmPassword,
+      });
+      if (!validation.isValid) {
+        return { success: false, error: validation.error };
+      }
+    } else {
+      if (!currentPassword) {
+        return { success: false, error: 'Current password is required.' };
+      }
+      if (!newPassword || newPassword.length < 6) {
+        return { success: false, error: 'New password must be at least 6 characters long.' };
+      }
+      if (newPassword === currentPassword) {
+        return { success: false, error: 'New password cannot be the same as your current password.' };
+      }
+    }
+
+    if (isLiveFirebaseConfigured) {
+      const currentUser = auth.currentUser;
+      if (!currentUser) {
+        return { success: false, error: 'Your session has expired. Please log in again.' };
+      }
+
+      // Identify user's synthetic email
+      let userEmail = currentUser.email;
+      if (!userEmail) {
+        // Fallback: lookup user profile to reconstruct synthetic email
+        const userDoc = await getDoc(doc(db, 'users', currentUser.uid)).catch(() => null);
+        const userData = userDoc?.exists() ? (userDoc.data() as AppUser) : null;
+        if (userData?.role === 'student') {
+          userEmail = studentPinToEmail((userData as StudentUser).pin);
+        } else if (userData?.role === 'staff' || userData?.role === 'teacher') {
+          userEmail = staffPhoneToEmail((userData as StaffUser).mobile);
+        } else if (userData?.role === 'admin') {
+          userEmail = adminPhoneToEmail((userData as AdminUser).mobile);
+        }
+      }
+
+      if (!userEmail) {
+        return { success: false, error: 'Unable to identify account credentials for reauthentication.' };
+      }
+
+      // 2. Reauthenticate using current password
+      try {
+        const credential = EmailAuthProvider.credential(userEmail, currentPassword);
+        await reauthenticateWithCredential(currentUser, credential);
+      } catch (authErr: any) {
+        console.warn('Reauthentication error:', authErr.code, authErr.message);
+        // If teacher account used legacy teacher email, try legacy email fallback
+        if (
+          (authErr.code === 'auth/user-not-found' || authErr.code === 'auth/invalid-credential') &&
+          userEmail.startsWith('staff_')
+        ) {
+          const legacyEmail = userEmail.replace('staff_', 'teacher_');
+          try {
+            const legacyCred = EmailAuthProvider.credential(legacyEmail, currentPassword);
+            await reauthenticateWithCredential(currentUser, legacyCred);
+          } catch {
+            return { success: false, error: 'Current password is incorrect.' };
+          }
+        } else if (
+          authErr.code === 'auth/wrong-password' ||
+          authErr.code === 'auth/invalid-credential'
+        ) {
+          return { success: false, error: 'Current password is incorrect.' };
+        } else if (authErr.code === 'auth/too-many-requests') {
+          return { success: false, error: 'Too many unsuccessful attempts. Please try again later.' };
+        } else {
+          return { success: false, error: authErr.message || 'Verification of current password failed.' };
+        }
+      }
+
+      // 3. Update Firebase Authentication Password
+      try {
+        await updatePassword(currentUser, newPassword);
+      } catch (pwdErr: any) {
+        console.error('Firebase updatePassword error:', pwdErr);
+        if (pwdErr.code === 'auth/weak-password') {
+          return { success: false, error: 'Password is too weak. Please use at least 6 characters.' };
+        }
+        if (pwdErr.code === 'auth/requires-recent-login') {
+          return { success: false, error: 'Session requires refresh. Please log out and sign in again.' };
+        }
+        return { success: false, error: pwdErr.message || 'Failed to update password.' };
+      }
+
+      // 4. Update Firestore user doc: clear mustChangePassword flag & record updatedAt
+      try {
+        const updatePayload: any = {
+          mustChangePassword: false,
+          updatedAt: new Date().toISOString(),
+        };
+        await updateDoc(doc(db, 'users', currentUser.uid), updatePayload).catch(() => {});
+        // Also update sub-collections if present
+        getDoc(doc(db, 'students', currentUser.uid)).then((snap) => {
+          if (snap.exists()) updateDoc(doc(db, 'students', currentUser.uid), updatePayload).catch(() => {});
+        }).catch(() => {});
+        getDoc(doc(db, 'staff', currentUser.uid)).then((snap) => {
+          if (snap.exists()) updateDoc(doc(db, 'staff', currentUser.uid), updatePayload).catch(() => {});
+        }).catch(() => {});
+        getDoc(doc(db, 'teachers', currentUser.uid)).then((snap) => {
+          if (snap.exists()) updateDoc(doc(db, 'teachers', currentUser.uid), updatePayload).catch(() => {});
+        }).catch(() => {});
+      } catch (e) {
+        console.warn('Firestore update metadata note:', e);
+      }
+
+      // 5. Update local mock store cache so fallback mode stays in sync
+      MockStore.updateUserData(currentUser.uid, {
+        mustChangePassword: false,
+        passwordHash: newPassword,
+      });
+
+      return { success: true, error: null };
+    } else {
+      // Mock / Offline mode fallback
+      const session = MockStore.getSession();
+      if (!session?.uid) {
+        return { success: false, error: 'Session not found. Please log in again.' };
+      }
+
+      const users = MockStore.getUsers();
+      const user = users.find((u) => u.uid === session.uid);
+      if (!user) {
+        return { success: false, error: 'User account not found.' };
+      }
+
+      if ((user as any).passwordHash !== currentPassword) {
+        return { success: false, error: 'Current password is incorrect.' };
+      }
+
+      MockStore.updateUserData(session.uid, {
+        passwordHash: newPassword,
+        mustChangePassword: false,
+      });
+
+      return { success: true, error: null };
+    }
+  },
+
+  /**
    * Logout user and purge all temporary session data to eliminate same-device bleed
    */
   async logout(): Promise<void> {
@@ -1080,3 +1245,4 @@ export const authService = {
     }
   },
 };
+

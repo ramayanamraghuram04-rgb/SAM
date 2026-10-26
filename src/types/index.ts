@@ -15,6 +15,7 @@ export interface BaseUser {
   department: Department;
   status: UserStatus;
   active?: boolean;
+  mustChangePassword?: boolean;
   createdAt: string;
   updatedAt?: string;
 }
