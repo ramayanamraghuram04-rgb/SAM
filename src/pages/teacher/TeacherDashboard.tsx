@@ -109,35 +109,33 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
           </p>
         </div>
 
-        <div className="self-start sm:self-center shrink-0 flex flex-wrap items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            leftIcon={<Camera className="w-4 h-4 text-blue-200" />}
+        <div className="self-start sm:self-center shrink-0 flex flex-wrap items-center gap-2.5">
+          <button
+            type="button"
             onClick={() => handleOpenCreateAssignment('camera')}
-            className="border-white/30 text-white hover:bg-white/10 text-xs shadow-xs"
+            className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-white/20 hover:bg-white/30 text-white font-bold text-xs backdrop-blur-md transition-all active:scale-[0.98] cursor-pointer border border-white/30 shadow-xs"
           >
-            Camera Scan
-          </Button>
+            <Camera className="w-4 h-4 text-blue-100" />
+            <span>Camera Scan</span>
+          </button>
 
-          <Button
-            variant="outline"
-            size="sm"
-            leftIcon={<Upload className="w-4 h-4 text-blue-200" />}
+          <button
+            type="button"
             onClick={() => handleOpenCreateAssignment('upload')}
-            className="border-white/30 text-white hover:bg-white/10 text-xs shadow-xs"
+            className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-white/20 hover:bg-white/30 text-white font-bold text-xs backdrop-blur-md transition-all active:scale-[0.98] cursor-pointer border border-white/30 shadow-xs"
           >
-            Upload Question
-          </Button>
+            <Upload className="w-4 h-4 text-blue-100" />
+            <span>Upload Question</span>
+          </button>
 
           <button
             type="button"
             id="teacher-dashboard-change-password-btn"
             onClick={openChangePasswordDialog}
-            className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/15 hover:bg-white/25 text-white font-bold text-xs backdrop-blur-xs transition-all active:scale-[0.98] cursor-pointer border border-white/20"
+            className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-white/20 hover:bg-white/30 text-white font-bold text-xs backdrop-blur-md transition-all active:scale-[0.98] cursor-pointer border border-white/30 shadow-xs"
             title="Change your login password"
           >
-            <KeyRound className="w-3.5 h-3.5" />
+            <KeyRound className="w-4 h-4 text-blue-100" />
             <span>Change Password</span>
           </button>
         </div>
