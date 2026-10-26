@@ -227,6 +227,9 @@ export const authService = {
         ) {
           return { user: null, error: 'Incorrect mobile number or password.' };
         }
+        if (err.code === 'auth/too-many-requests') {
+          return { user: null, error: 'Too many failed login attempts. Please wait a few moments before trying again.' };
+        }
         return { user: null, error: err.message || 'Login failed. Please verify credentials.' };
       }
     } else {
@@ -290,12 +293,22 @@ export const authService = {
         try {
           cred = await signInWithEmailAndPassword(auth, staffEmail, password);
         } catch (err: any) {
-          // Fallback to legacy teacher email if staff account was registered previously
+          // Resilient check: Try alternate trailing @ suffix (e.g. kiran800 vs kiran800@)
+          const altPassword = password.endsWith('@') ? password.slice(0, -1) : `${password}@`;
           if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
             try {
-              cred = await signInWithEmailAndPassword(auth, legacyTeacherEmail, password);
-            } catch (legacyErr) {
-              throw err;
+              cred = await signInWithEmailAndPassword(auth, staffEmail, altPassword);
+            } catch (_) {
+              // Fallback to legacy teacher email if staff account was registered previously
+              try {
+                cred = await signInWithEmailAndPassword(auth, legacyTeacherEmail, password);
+              } catch (legacyErr) {
+                try {
+                  cred = await signInWithEmailAndPassword(auth, legacyTeacherEmail, altPassword);
+                } catch (_) {
+                  throw err;
+                }
+              }
             }
           } else {
             throw err;
@@ -335,6 +348,9 @@ export const authService = {
           err.code === 'auth/user-not-found'
         ) {
           return { user: null, error: 'Incorrect mobile number or password.' };
+        }
+        if (err.code === 'auth/too-many-requests') {
+          return { user: null, error: 'Too many failed login attempts. Please wait a few moments before trying again.' };
         }
         return { user: null, error: 'Login failed. Please check your credentials or contact Admin.' };
       }
@@ -413,6 +429,9 @@ export const authService = {
           err.code === 'auth/user-not-found'
         ) {
           return { user: null, error: 'Incorrect PIN or password.' };
+        }
+        if (err.code === 'auth/too-many-requests') {
+          return { user: null, error: 'Too many failed login attempts. Please wait a few moments before trying again.' };
         }
         return { user: null, error: 'Login failed. Please check your PIN and password or contact Admin.' };
       }
