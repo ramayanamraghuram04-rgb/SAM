@@ -222,13 +222,10 @@ test('21. TeacherDashboard provides Camera Scan and Upload Question buttons in h
   assert(dashboard.includes("handleOpenCreateAssignment('upload')"), 'Upload button must trigger upload mode');
 });
 
-// 22. TeacherDashboard renders dedicated Assignment Creation & Upload Hub
-test('22. TeacherDashboard renders dedicated Assignment Creation & Upload Hub with 3 cards', () => {
+// 22. TeacherDashboard renders streamlined layout and maintains modal attachment mode integration
+test('22. TeacherDashboard renders clean layout and maintains modal attachment mode integration', () => {
   const dashboard = fs.readFileSync('src/pages/teacher/TeacherDashboard.tsx', 'utf8');
-  assert(dashboard.includes('Assignment Creation & Upload'), 'Must label Assignment Creation & Upload Hub');
-  assert(dashboard.includes('Camera Capture'), 'Must render Camera Capture card');
-  assert(dashboard.includes('Upload Question File'), 'Must render Upload Question File card');
-  assert(dashboard.includes('Standard Assignment'), 'Must render Standard Assignment card');
+  assert(dashboard.includes('CreateAssignmentModal'), 'Must integrate CreateAssignmentModal');
   assert(dashboard.includes('initialAttachmentMode={initialAttachmentMode}'), 'Dashboard must pass initialAttachmentMode to modal');
 });
 
